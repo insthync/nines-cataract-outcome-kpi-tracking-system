@@ -2,7 +2,7 @@
   const $ = s => document.querySelector(s);
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   const button = (text, fn, cls = 'secondary') => { const b = el('button', cls, text); b.type = 'button'; b.onclick = fn; return b; };
-  const roles = {viewer:'ผู้ชม / ผู้บริหาร',editor:'เจ้าหน้าที่',admin:'ผู้ดูแล'};
+  const roles = {viewer:'ผู้ชม',editor:'เจ้าหน้าที่',admin:'ผู้ดูแล'};
   const titles = {dashboard:'ภาพรวมผู้บริหาร',registry:'ทะเบียนผ่าตัด',followup:'ติดตามผลหลังผ่าตัด',monthly:'สถิติรายเดือน',trend:'แนวโน้มผลลัพธ์',quality:'คุณภาพและการทบทวน',reports:'รายงานผลลัพธ์',users:'จัดการสมาชิก'};
   const state = {view:'dashboard',cases:[],targets:[],actions:[],users:[],editing:null,user:null,action:null,generation:0,dirty:false,saving:false,search:'',filter:'',page:1,loaded:false};
   const path = name => `/api/collections/${name}/records`;
