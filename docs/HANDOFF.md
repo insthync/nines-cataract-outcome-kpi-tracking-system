@@ -2,6 +2,15 @@
 
 Updated: 2026-09-19 (Asia/Bangkok)
 
+## Mobile Hamburger and display title update — 2026-09-19
+
+- Display title, header, registration page and CSV report now use Cataract Outcome without Nines; the repository name is unchanged. Verified the new title on desktop/mobile.
+- Replaced the mobile horizontal navigation strip with a Hamburger button and left modal drawer at <=760px. Desktop retains its sidebar.
+- Uses the existing navigation nodes and preserves `id="add-case-button"`; closes on selection, close button, outside click and Escape. Native dialog contains focus and returns it to the trigger. Resizing to desktop closes the drawer and restores the sidebar.
+- Browser verified at 390px and 1280px: open/close, selection, Escape/focus return, backdrop, Add New Case dialog, resize restoration, no duplicate add-case ID, no page overflow and no warning/error logs.
+- Temporary-database suite: 124 assertions passed. JS syntax, PowerShell parsing, Bash syntax/LF and git diff --check passed. No real data accessed.
+- Shared asset version updated to `202609191859` in index.html and register.html.
+
 ## Delivered
 
 - Converted the clean starter checkout to `nines-cataract-outcome-kpi-tracking-system`; HTML/CSS/JavaScript + PocketBase 0.39.8 + SQLite retained. No framework, external frontend assets or build dependencies.

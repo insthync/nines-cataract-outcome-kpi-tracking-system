@@ -11,3 +11,18 @@
 @media print{.topbar,.sidebar,.prototype,.period-bar button,.page-heading button,button,#notice{display:none!important}#workspace{display:block}.content{padding:0}.kpi-card,.panel{break-inside:avoid}body{background:white}.table-wrap{overflow:visible}.kpi-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:760px){.toolbar input{flex-basis:100%}.toolbar select{min-width:160px}.toolbar button{flex-shrink:0}}
 #confirm-message{font-size:18px;line-height:1.7;margin-bottom:20px}
+/* Mobile navigation uses the same sidebar inside a modal drawer. */
+#mobile-menu-toggle{display:none;font-size:24px;line-height:1;padding:8px 12px}
+.mobile-menu{position:fixed;inset:0 auto 0 0;margin:0;width:min(320px,calc(100vw - 48px));height:100dvh;max-height:100dvh;padding:0;border:0;border-radius:0;background:#123b59;color:#e1eef7;overflow-y:auto;overscroll-behavior:contain}
+.mobile-menu-heading{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #34546c}
+.mobile-menu-heading h2{font-size:18px}
+.mobile-menu-heading button{background:transparent;color:white;padding:8px 12px}
+.mobile-menu .sidebar{padding:12px 16px 24px}
+.mobile-menu .sidebar>.eyebrow{display:none}
+.mobile-menu .sidebar nav{display:flex;flex-direction:column;overflow:visible;margin:0;gap:5px}
+.mobile-menu .sidebar button{width:100%;min-width:0;padding:12px;text-align:left}
+.mobile-menu .sidebar button span{font-size:14px}
+.mobile-menu .sidebar #add-case-button{margin:8px 0}
+.mobile-menu .sidebar-note{display:block}
+body:has(#mobile-menu[open]){overflow:hidden}
+@media(max-width:760px){#mobile-menu-toggle:not([hidden]){display:inline-flex;align-items:center;justify-content:center}.topbar{justify-content:flex-start;gap:12px}.topbar #account{margin-left:auto}#workspace>.sidebar{display:none}}

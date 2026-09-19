@@ -7,6 +7,32 @@
   const state = {view:'dashboard',cases:[],targets:[],actions:[],users:[],editing:null,user:null,action:null,generation:0,dirty:false,saving:false,search:'',filter:'',page:1,loaded:false};
   const path = name => `/api/collections/${name}/records`;
   const canWrite = () => ['editor','admin'].includes(API.user?.role);
+  const mobileLayout = window.matchMedia('(max-width: 760px)');
+  const menuDialog = $('#mobile-menu');
+  function closeMenu() { if (menuDialog.open) menuDialog.close(); $('#mobile-menu-toggle').setAttribute('aria-expanded', 'false'); }
+  function syncMenuLayout() {
+    const wasOpen = menuDialog.open;
+    closeMenu();
+    if (mobileLayout.matches) menuDialog.append($('#sidebar'));
+    else {
+      $('#workspace').prepend($('#sidebar'));
+      if (wasOpen) $('#sidebar .selected')?.focus();
+    }
+  }
+  $('#mobile-menu-toggle').onclick = () => {
+    if (!mobileLayout.matches || !API.user?.active) return;
+    menuDialog.showModal();
+    $('#mobile-menu-toggle').setAttribute('aria-expanded', 'true');
+  };
+  $('#mobile-menu-close').onclick = closeMenu;
+  menuDialog.addEventListener('close', () => $('#mobile-menu-toggle').setAttribute('aria-expanded', 'false'));
+  menuDialog.addEventListener('click', event => {
+    if (event.target !== menuDialog) return;
+    const rect = menuDialog.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeMenu();
+  });
+  mobileLayout.addEventListener('change', syncMenuLayout);
+  syncMenuLayout();
   const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const groups = [
     ['01','ข้อมูลผู้ป่วยและการผ่าตัด',[
@@ -40,6 +66,8 @@
   function notice(text, error=false) { $('#notice').textContent=text; $('#notice').className=error?'error notice':'notice'; }
   function sessionUI() {
     const active=Boolean(API.user?.active); $('#login-panel').hidden=active; $('#workspace').hidden=!active; $('#account').hidden=!active;
+    $('#mobile-menu-toggle').hidden = !active;
+    if (!active) closeMenu();
     $('#account-name').textContent=active?`${API.user.name} · ${roles[API.user.role]}`:'';
     $('#users-tab').hidden=API.user?.role!=='admin'; $('#add-case-button').hidden=!canWrite();
     if(!active){state.generation++;state.cases=[];state.targets=[];state.actions=[];state.users=[];state.loaded=false;$('#view-content').replaceChildren();document.querySelectorAll('dialog[open]').forEach(d=>d.close());state.dirty=false;}
@@ -95,7 +123,7 @@
     rows.forEach(r=>{const c=el('div','chart-column');c.append(el('span','chart-count',r[1]));const bar=el('div','chart-bar');bar.style.height=`${r[1]/max*100}px`;c.append(bar,el('span','',r[0].slice(5)));chart.append(c);});p.append(chart,table(['เดือน','ผ่าตัด (ราย)','VA ผ่าน / ประเมิน'],rows));return p;
   }
   function table(headers,rows){const wrap=el('div','table-wrap'),t=el('table'),head=el('thead'),tr=el('tr');headers.forEach(h=>tr.append(el('th','',h)));head.append(tr);const body=el('tbody');rows.forEach(values=>{const row=el('tr');values.forEach(v=>{const td=el('td');td.append(v instanceof Node?v:document.createTextNode(String(v)));row.append(td);});body.append(row);});t.append(head,body);wrap.append(t);return wrap;}
-  function setView(view){state.view=view;state.page=1;state.search='';state.filter='';notice('');render();}
+  function setView(view){closeMenu();state.view=view;state.page=1;state.search='';state.filter='';notice('');render();}
   function render(){
     if(!state.loaded)return;
     $('#page-title').textContent=titles[state.view];$('#page-description').textContent=state.view==='users'?'กำหนดบทบาทและสถานะบัญชีของทีม':'ข้อมูลจริงที่บันทึกในระบบ · ไม่ใช้ข้อมูลตัวอย่างคำนวณ KPI';
@@ -133,6 +161,7 @@
     const pager=el('div','pagination');pager.append(el('span','',`${list.length} รายการ · หน้า ${state.page}/${pages}`));const controls=el('div');const prev=button('ก่อนหน้า',()=>{state.page--;render();}),next=button('ถัดไป',()=>{state.page++;render();});prev.disabled=state.page<=1;next.disabled=state.page>=pages;controls.append(prev,next);pager.append(controls);p.append(pager);root.append(p);
   }
   function openCase(record=null){
+    closeMenu();
     state.editing=record;state.dirty=false;const form=$('#case-form');form.reset();fieldNames.forEach(k=>{form.elements[k].value=record?.[k]??(k==='surgery_date'?today():'');});
     $('#case-fields').disabled=!canWrite()||Boolean(record?.archived);$('#save-case').hidden=!canWrite()||Boolean(record?.archived);$('#case-title').textContent=record?'รายละเอียด / แก้ไขผู้ป่วย':'เพิ่มผู้ป่วยใหม่';$('#save-case').textContent=record?'บันทึกการแก้ไข':'บันทึกผู้ป่วย';$('#case-error').textContent='';$('#save-state').textContent=record?`บันทึกล่าสุด ${record.updated} · ฉบับที่ ${record.revision}`:'ยังไม่ได้บันทึก';
     $('#case-audit').replaceChildren();if(record){$('#case-audit').append(el('p','',`สร้าง ${record.created} โดย ${record.created_by} · แก้ไขโดย ${record.updated_by}`));if(API.user.role==='admin')$('#case-audit').append(button('ดูประวัติการแก้ไข',async()=>{try{const data=await API.request(`${path('audit_logs')}?perPage=100&sort=-created&filter=${encodeURIComponent(`entity = "cases" && record_id = "${record.id}"`)}`);if(state.editing?.id!==record.id)return;$('#case-audit').replaceChildren(...data.items.map(a=>el('p','',`${a.created} · ${a.actor} · ${a.operation} · ${Object.keys(a.changes||{}).join(', ')}`)));}catch(e){$('#case-error').textContent=e.message;}}));}
@@ -141,7 +170,7 @@
   function renderUsers(root){const p=panel('สมาชิกทีม');state.users.forEach(u=>{const r=el('article','record');r.append(el('strong','',u.name),el('span','badge',`${roles[u.role]} · ${u.active?'เปิด':'ปิด'}ใช้งาน`));if(u.id!==API.user.id)r.append(button('แก้ไขสมาชิก',()=>{state.user=u;const f=$('#user-form');f.elements.name.value=u.name;f.elements.role.value=u.role;f.elements.active.checked=u.active;$('#user-error').textContent='';$('#user-dialog').showModal();}));else r.append(el('span','muted','บัญชีของคุณ'));p.append(r);});root.append(p);}
   function renderActions(root){const p=panel('Monthly Quality Review · CQI / PDCA');if(canWrite())p.append(button('＋ เพิ่มแผนปรับปรุง',()=>openAction()));const actions=state.actions.filter(a=>a.month===$('#period-month').value);if(!actions.length)empty(p,'ยังไม่มีแผนทบทวนในเดือนอ้างอิง');actions.forEach(a=>{const row=el('article','record');const info=el('div');info.append(el('h3','record-title',a.title),el('p','muted',`${a.owner} · ครบกำหนด ${a.due_date}`));row.append(info,el('span','badge',a.stage.toUpperCase()),button('เปิดแผน',()=>openAction(a)));p.append(row);});root.append(p);}
   function openAction(record=null){state.action=record;const f=$('#action-form');f.reset();['month','due_date','title','owner','stage','detail'].forEach(k=>{f.elements[k].value=record?.[k]??({month:$('#period-month').value,stage:'plan'}[k]||'');});$('#action-fields').disabled=!canWrite();$('#save-action').hidden=!canWrite();$('#action-error').textContent='';$('#action-dialog').showModal();}
-  function exportReport(cases){const rows=[['Nines Cataract Outcome Report'],['ช่วงเวลา',$('#period-month').value,$('#period-mode').value],['วันที่สร้าง',today()],['KPI','Numerator','Denominator','Percent','Missing'],...Clinical.kpis(cases,state.targets).map(k=>[k.label,k.numerator,k.denominator,k.value===null?'N/A':k.value.toFixed(2),k.missing])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=el('a');a.href=url;a.download=`cataract-outcome-${$('#period-month').value}-${$('#period-mode').value}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('ส่งออกสถิติจากข้อมูลที่บันทึกแล้ว');}
+  function exportReport(cases){const rows=[['Cataract Outcome Report'],['ช่วงเวลา',$('#period-month').value,$('#period-mode').value],['วันที่สร้าง',today()],['KPI','Numerator','Denominator','Percent','Missing'],...Clinical.kpis(cases,state.targets).map(k=>[k.label,k.numerator,k.denominator,k.value===null?'N/A':k.value.toFixed(2),k.missing])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=el('a');a.href=url;a.download=`cataract-outcome-${$('#period-month').value}-${$('#period-mode').value}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('ส่งออกสถิติจากข้อมูลที่บันทึกแล้ว');}
   async function submit(event,errorSelector,task){event.preventDefault();const b=event.currentTarget.querySelector('button[type=submit]');if(b.disabled)return;b.disabled=true;$(errorSelector).textContent='';try{await task();}catch(e){$(errorSelector).textContent=e.message;}finally{b.disabled=false;}}
   $('#login-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#login-error',async()=>{await API.login(f.elements.identity.value.trim(),f.elements.password.value);f.reset();state.view='dashboard';await load();});};
   $('#case-form').oninput=()=>{state.dirty=true;$('#save-state').textContent='มีการแก้ไขที่ยังไม่ได้บันทึก (Unsaved changes)';};

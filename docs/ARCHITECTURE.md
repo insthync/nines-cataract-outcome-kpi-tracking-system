@@ -35,7 +35,7 @@ Alerts are derived deterministically from saved cases: Critical for endophthalmi
 
 Reports export UTF-8 BOM CSV aggregates, without patient identifiers; browser print supports PDF. Backup is an operator PocketBase function, not a CSV report. No import/master/settings/KPI-monitoring pages or import-job store are included, as explicitly confirmed.
 
-UI uses textContent for user data, role-aware controls, native dialog focus containment, asynchronous HTML confirmations, unsaved-case protection and disabled save buttons during requests. Admin can inspect the newest 100 audit entries per case; full history is available through authorized PocketBase API. Mobile navigation scrolls within its own strip, not the page.
+UI uses textContent for user data, role-aware controls, native dialog focus containment, asynchronous HTML confirmations, unsaved-case protection and disabled save buttons during requests. Admin can inspect the newest 100 audit entries per case; full history is available through authorized PocketBase API. At widths <=760px, the same sidebar moves into a native modal drawer opened by a Hamburger button. Focus is contained, Escape/backdrop/close dismiss it, selecting a page closes it, and desktop resize restores the sidebar without duplicating navigation IDs.
 
 ## Schema lifecycle
 
