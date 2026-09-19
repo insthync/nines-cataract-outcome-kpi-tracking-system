@@ -2,8 +2,8 @@
 <html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#113b5b"><title>Cataract Outcome KPI Tracking System</title>
-<link rel="stylesheet" href="styles.css?v=202609200438">
-<script src="config.js?v=202609200438" defer></script><script src="api.js?v=202609200438" defer></script><script src="clinical.js?v=202609200438" defer></script><script src="app.js?v=202609200438" defer></script>
+<link rel="stylesheet" href="styles.css?v=202609200536">
+<script src="config.js?v=202609200536" defer></script><script src="api.js?v=202609200536" defer></script><script src="clinical.js?v=202609200536" defer></script><script src="app.js?v=202609200536" defer></script>
 </head><body>
 <header class="topbar"><button id="mobile-menu-toggle" type="button" class="secondary" aria-label="เปิดเมนูหลัก" aria-controls="mobile-menu" aria-expanded="false" hidden><span aria-hidden="true">☰</span></button><a class="brand" href="./"><span class="mark">◎</span><span>Cataract Outcome<small>KPI Tracking System</small></span></a><div id="account" hidden><span id="account-name"></span><button id="logout" class="quiet">ออกจากระบบ</button></div></header>
 <main>
@@ -30,7 +30,9 @@
 <dialog id="mobile-menu" class="mobile-menu" aria-labelledby="mobile-menu-title"><div class="mobile-menu-heading"><h2 id="mobile-menu-title">เมนูหลัก</h2><button id="mobile-menu-close" type="button" aria-label="ปิดเมนูหลัก">✕</button></div></dialog>
 <dialog id="target-dialog" aria-labelledby="target-title"><form id="target-form">
 <div class="dialog-heading"><h2 id="target-title">แก้ไขเป้าหมาย KPI</h2><button type="button" class="quiet" data-close="target-dialog" aria-label="ปิดเป้าหมาย KPI">✕</button></div>
-<p id="target-label" class="kpi-label"></p><p id="target-direction" class="muted"></p>
+<p id="target-label" class="kpi-label"></p>
+<fieldset id="target-definition"><label>ชื่อ KPI<input name="label" maxlength="120" required></label><label>ข้อมูลผลลัพธ์ที่ใช้คำนวณ<select name="source" required></select></label></fieldset>
+<p id="target-direction" class="muted"></p>
 <fieldset id="target-fields"><label>เป้าหมาย (%)<input name="target" type="number" min="0" max="100" step="any" required></label>
 <label>จำนวนข้อมูลขั้นต่ำ (ราย)<input name="min_sample" type="number" min="1" step="1" required></label>
 <label class="checkbox"><input name="enabled" type="checkbox">เปิดใช้การประเมินตามเป้าหมาย</label></fieldset>

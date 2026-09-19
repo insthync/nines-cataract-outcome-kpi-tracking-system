@@ -5,8 +5,12 @@ function stampCataract(e) {
   if (!e.hasSuperuserAuth()) {
     const permitted = e.record.collection().name === "cases"
       ? ["hn", "patient_name", "surgery_date", "surgeon", "diagnosis", "procedure", "eye", "anesthesia", "surgery_time", "preop_va", "implant", "lens_type", "guidance", "day1_date", "day1_va", "week1_date", "week1_va", "month1_date", "month1_va", "va_outcome", "endophthalmitis", "wound_leak", "reoperation", "biometry", "refractive", "pain_score", "notes", "revision", "archived"]
-      : e.record.collection().name === "quality_actions" ? ["month", "due_date", "title", "owner", "stage", "detail"] : ["target", "enabled", "min_sample"];
+      : e.record.collection().name === "quality_actions" ? ["month", "due_date", "title", "owner", "stage", "detail"] : e.record.isNew() ? ["label", "source", "target", "enabled", "min_sample"] : ["target", "enabled", "min_sample"];
     if (Object.keys(body).some(k => !permitted.includes(k))) throw new BadRequestError("มีฟิลด์ที่ไม่อนุญาตให้แก้ไข");
+  }
+  if (e.record.collection().name === "kpi_targets" && e.record.isNew()) {
+    e.record.set("key", "custom_" + $security.randomString(20));
+    e.record.set("direction", ["va_outcome", "biometry", "refractive"].includes(e.record.getString("source")) ? "gte" : "lte");
   }
   if (e.record.collection().name === "cases") {
     if (!e.hasSuperuserAuth() && e.auth?.getString("role") !== "admin" && Object.hasOwn(body, "archived")) throw new ForbiddenError("เฉพาะผู้ดูแลที่ยกเลิกหรือคืนรายการได้");
@@ -18,10 +22,17 @@ function stampCataract(e) {
   e.record.set("updated_by", actor);
   e.next();
 }
-onRecordCreateRequest(stampCataract, "cases", "quality_actions");
+onRecordCreateRequest(stampCataract, "cases", "quality_actions", "kpi_targets");
 onRecordUpdateRequest(stampCataract, "cases", "quality_actions", "kpi_targets");
 onRecordUpdateRequest((e) => {
   if (!e.hasSuperuserAuth() && Object.keys(e.requestInfo().body || {}).some(k => !["target", "enabled", "min_sample"].includes(k))) throw new BadRequestError("ปรับได้เฉพาะเป้าหมาย สถานะ และจำนวนตัวอย่างขั้นต่ำ");
+  e.next();
+}, "kpi_targets");
+
+onRecordValidate((e) => {
+  const label = e.record.getString("label").trim();
+  if (!label) throw new BadRequestError("กรุณาระบุชื่อ KPI");
+  e.record.set("label", label);
   e.next();
 }, "kpi_targets");
 
@@ -55,6 +66,8 @@ onRecordValidate((e) => {
 // Data change and audit record commit together. Audit never includes patient identifiers.
 function auditCataract(e) {
   const isNew = e.record.isNew();
+  // Original schema migration seeds definitions before audit_logs exists.
+  if (isNew && e.record.collection().name === "kpi_targets" && !e.record.getString("created_by")) { e.next(); return; }
   const before = e.record.original().publicExport();
   e.app.runInTransaction(tx => {
     e.app = tx;
@@ -70,7 +83,7 @@ function auditCataract(e) {
     tx.save(log);
   });
 }
-onRecordCreate(auditCataract, "cases", "quality_actions");
+onRecordCreate(auditCataract, "cases", "quality_actions", "kpi_targets");
 onRecordUpdate(auditCataract, "cases", "quality_actions", "kpi_targets");
 
 onRecordEnrich((e) => {

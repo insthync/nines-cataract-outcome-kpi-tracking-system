@@ -7,9 +7,11 @@
   ];
   function kpis(cases, targets = []) {
     const live = cases.filter(c => !c.archived);
-    return definitions.map(([key, label, positive]) => {
-      const assessed = live.filter(c => [positive, positive === "pass" ? "fail" : "no"].includes(c[key]));
-      const numerator = assessed.filter(c => c[key] === positive).length, denominator = assessed.length;
+    const custom = targets.filter(t => !definitions.some(d => d[0] === t.key));
+    const metrics = [...definitions.map(([key, label, positive]) => ({key, label, source:key, positive})), ...custom.map(t => ({key:t.key, label:t.label, source:t.source, positive:definitions.find(d=>d[0]===t.source)?.[2]}))];
+    return metrics.map(({key, label, source, positive}) => {
+      const assessed = positive ? live.filter(c => [positive, positive === "pass" ? "fail" : "no"].includes(c[source])) : [];
+      const numerator = assessed.filter(c => c[source] === positive).length, denominator = assessed.length;
       const value = denominator ? numerator / denominator * 100 : null;
       const target = targets.find(t => t.key === key);
       const enough = denominator >= (target?.min_sample || 1);

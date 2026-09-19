@@ -62,6 +62,30 @@ export async function runCataract({request,check,accounts,su,password,base}) {
   const disabledTarget=await request(`${targets}/${va.id}`,'PATCH',{enabled:false},admin);
   check(disabledTarget.status===200 && Clinical.kpis([saved.data,saved.data],[disabledTarget.data])[0].status==='unconfigured','admin disables target without discarding measured outcomes');
   check((await request(`${targets}/${va.id}`,'PATCH',{enabled:true},admin)).status===200,'admin re-enables target');
+  check(defs.data.items.every(t=>t.source===t.key),'migration backfills built-in data sources');
+  const customBody={label:'VA เป้าหมายทีมทดสอบ',source:'va_outcome',target:95,min_sample:1,enabled:true};
+  for (const token of [undefined,viewer,editor]) check((await request(targets,'POST',customBody,token)).status>=400,'only admin creates KPI targets');
+  for (const override of [{label:'   '},{source:'patient_name'},{source:''},{target:101},{target:-1},{min_sample:0},{min_sample:1.5},{key:'forged'},{direction:'lte'},{created_by:'forged'},{source:'va_outcome',unknown_field:true}]) {
+    check((await request(targets,'POST',{...customBody,...override},admin)).status===400,`invalid new KPI rejected ${JSON.stringify(override)}`);
+  }
+  const custom=await request(targets,'POST',customBody,admin);
+  check(custom.status===200,`admin creates custom KPI: ${JSON.stringify(custom)}`);
+  check(custom.data.key.startsWith('custom_')&&custom.data.direction==='gte'&&custom.data.created_by===accounts.admin.record.id,'custom key direction and actor are server-owned');
+  check((await request(targets,'POST',customBody,admin)).status===400,'duplicate KPI label rejected');
+  const customRead=await request(`${targets}/${custom.data.id}`,'GET',undefined,viewer);
+  check(customRead.data.source==='va_outcome'&&customRead.data.target===95,'new KPI persists and viewer can read');
+  const customMetric=Clinical.kpis([saved.data], [customRead.data]).find(k=>k.key===custom.data.key);
+  check(customMetric.label===customBody.label&&customMetric.value===100&&customMetric.numerator===1&&customMetric.denominator===1&&customMetric.status==='pass','custom KPI calculates using saved source outcomes');
+  check(Clinical.kpis([], [customRead.data]).find(k=>k.key===custom.data.key).value===null,'empty custom KPI remains N/A');
+  const customLog=await request(`${audit}?filter=${encodeURIComponent(`entity = "kpi_targets" && record_id = "${custom.data.id}"`)}`,'GET',undefined,admin);
+  check(customLog.data.totalItems===1&&customLog.data.items[0].operation==='create'&&customLog.data.items[0].changes.source.after==='va_outcome','custom creation has transactional audit');
+  for(const body of [{source:'biometry'},{label:'new label'},{direction:'lte'}]) check((await request(`${targets}/${custom.data.id}`,'PATCH',body,admin)).status===400,'saved KPI definition immutable');
+  const customDisabled=await request(`${targets}/${custom.data.id}`,'PATCH',{enabled:false,target:96},admin);
+  check(customDisabled.status===200&&Clinical.kpis([saved.data],[customDisabled.data]).find(k=>k.key===custom.data.key).status==='unconfigured','custom target can be edited and disabled');
+  check((await request(`${targets}/${custom.data.id}`,'DELETE',undefined,admin)).status>=400,'custom KPI uses disable instead of hard delete');
+  const complication=await request(targets,'POST',{...customBody,label:'Endophthalmitis เป้าหมายทีม',source:'endophthalmitis',target:0},admin);
+  const complicationMetric=Clinical.kpis([saved.data],[complication.data]).find(k=>k.key===complication.data.key);
+  check(complication.status===200&&complication.data.direction==='lte'&&complicationMetric.value===0&&complicationMetric.status==='pass','custom complication inherits lower-is-better formula');
   const action=await request(actions,'POST',{month:'2026-01',due_date:'2026-03-01',title:'ทบทวนผลลัพธ์',owner:'ทีมทดสอบ',stage:'plan',detail:'ไม่มีข้อมูลผู้ป่วย'},editor);
   check(action.status===200,`CQI create: ${JSON.stringify(action)}`);
   check((await request(`${actions}/${action.data.id}`,'PATCH',{stage:'check'},editor)).status===200,'CQI update persists');
