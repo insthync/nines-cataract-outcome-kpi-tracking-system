@@ -1,6 +1,6 @@
 (() => {
   const base = window.APP_CONFIG.pocketBaseUrl.replace(/\/$/, "");
-  const key = `pb-crud-app-starter:${base}:session`;
+  const key = `nines-cataract:${base}:session`;
   let session = null;
   try { session = JSON.parse(sessionStorage.getItem(key)); } catch { sessionStorage.removeItem(key); }
   const setSession = (value) => {
@@ -18,7 +18,8 @@
     const data = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
       if (response.status === 401) { setSession(null); window.dispatchEvent(new Event("session-ended")); }
-      const error = new Error(response.status === 401 ? "กรุณาเข้าสู่ระบบอีกครั้ง" : response.status === 403 || response.status === 404 ? "ไม่มีสิทธิ์ดำเนินการหรือไม่พบข้อมูล" : "ข้อมูลไม่ถูกต้องหรือไม่สามารถบันทึกได้ กรุณาตรวจสอบแล้วลองใหม่");
+      const detail = Object.entries(data?.data || {}).map(([field, value]) => `${field}: ${value.message || "ข้อมูลไม่ถูกต้อง"}`).join(" · ");
+      const error = new Error(response.status === 401 ? "กรุณาเข้าสู่ระบบอีกครั้ง" : response.status === 403 || response.status === 404 ? "ไม่มีสิทธิ์ดำเนินการหรือไม่พบข้อมูล" : response.status === 409 ? "ข้อมูลนี้มีผู้แก้ไขแล้ว กรุณาปิดฟอร์มและโหลดข้อมูลใหม่ก่อนบันทึก" : detail || (/[ก-๙]/.test(data?.message || "") ? data.message : "ข้อมูลไม่ถูกต้องหรือไม่สามารถบันทึกได้ กรุณาตรวจสอบแล้วลองใหม่"));
       error.status = response.status;
       error.details = data;
       throw error;

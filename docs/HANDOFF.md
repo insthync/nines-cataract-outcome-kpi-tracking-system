@@ -2,30 +2,52 @@
 
 Updated: 2026-09-19 (Asia/Bangkok)
 
-## State
+## Delivered
 
-- Created at `D:/Projects/WebApps/pb-crud-app-starter` as a separate local Git repository. No remote, commit, GitHub template setting or production deployment has been created.
-- Stack: static HTML/CSS/JavaScript, PocketBase 0.39.8, SQLite. No frontend build dependencies.
-- Thai login/registration, session handling, shared CRUD items, search/status filtering, pagination, desktop/mobile layouts.
-- Admin member list, name/role/active editing for other members, self-edit protection. All authorization enforced server-side.
-- Only public/ is served. Source OR Planning Board database was never accessed or copied; only its reusable setup scripts, registration hook and ignored PocketBase binary were reused. Source repository files remain unchanged.
-- README and customization guide explain how to start a new app and add fields. AGENTS.md preserves the validation and security conventions.
+- Converted the clean starter checkout to `nines-cataract-outcome-kpi-tracking-system`; HTML/CSS/JavaScript + PocketBase 0.39.8 + SQLite retained. No framework, external frontend assets or build dependencies.
+- Read AGENTS.md, README and all docs before editing; initial git status was clean. Inspected the live Canva reference and all fields under Add New Case. User explicitly confirmed exclusion of KPI Monitoring, Data Import, Master Data and Settings.
+- Thai responsive sidebar, executive dashboard, registry, case form/details, follow-up, monthly/quarterly/YTD/year statistics, year comparison, quality alerts, CQI/PDCA and aggregate CSV/print reports. Existing registration/login/admin retained.
+- New migration `1789810000_cataract.js`: cases, KPI target definitions, quality actions and audit logs. No patient seed records; six disabled KPI metadata rows only. Original migration unchanged. Legacy items preserved but app API access retired.
+- API role enforcement: viewer reads masked identities, editor adds/edits, admin archives/restores and manages other members. Permanent case/action deletion disabled for app roles.
+- Server validates required fields/dates/chronology/outcomes/pain/time, pairs follow-up date/VA, normalizes HN, rejects duplicate active encounters and prevents field/actor injection. Revision checks and audits are in the write transaction, preventing silent lost updates to cases.
+- Refresh persistence, save-in-progress/unsaved states, cancellation confirmation, visible API errors, metadata and per-case admin audit viewer. KPI uses only persisted non-archived cases; unknown outcomes never imply no complication.
+- Updated README, architecture/security contracts and customization guide; startup banners use the project name.
 
-## Verified
+## Verification completed
 
-- 61 API/security/validation/static-serving assertions with OS temporary data: guest isolation, viewer read-only, editor/admin CRUD, member management boundaries, promotion and deactivation with existing tokens, registration privilege injection, calendar validation, pagination/search, private-file URL rejection.
-- Migrations applied twice successfully (idempotent).
-- PowerShell setup: created then updated initial admin using isolated temporary data, without touching real pb_data.
-- Browser at default desktop width (~1265 px) and mobile 390 px: login, create/search, edit with persisted values, status update, admin member edit and role change, viewer controls/read-only details, session restore after reload, logout and registration success. No browser warning/error logs during these checks; narrow layout did not overflow horizontally.
-- JavaScript syntax for public scripts, migrations, hooks and test; PowerShell parser for all scripts; Bash syntax for each script and LF-only line endings.
-- Shared asset timestamp `202609191219` across both HTML pages.
-- Repository whitespace and ignore checks completed before delivery.
+- `node tests/integration.mjs`: **124 assertions PASS**, fresh OS temporary SQLite; guest isolation, roles, current-token role changes, deactivation, registration privilege injection, masked viewer responses, duplicate/invalid data rejection, actor/field injection, concurrency conflict, audit counts/redaction/immutability, target permissions/ranges, CQI persistence/validation, archive/restore, calculation denominators, minimum samples, date periods, follow-up alerts, pagination and private-path protection.
+- Migrations run twice on each fresh test database successfully. Tests do not open any real `pb_data`.
+- Browser verification: desktop (~1265 px), mobile **390 px**, tablet **820 px**. Login, empty-period N/A dashboard, create synthetic case, reload/session restore, search, edit all three follow-ups, persisted VA, audit history, unsaved form keep/discard, CQI create, report period filtering and CSV export, viewer masked/read-only detail, admin member-name update, case archive/restore.
+- At 390 and 820 px, measured document scroll width <= viewport width. Sidebar/table scrolling remains contained. Screenshots inspected for dashboard, registry, case form and tablet report.
+- Browser warning/error logs were empty during successful final flow checks. The reference site's nested iframe initially rejected input coordinates; its observed embedded URL was opened directly to inspect the form. A native confirm interaction stalled the test browser; application confirmations were replaced with accessible HTML dialogs and verified.
+- JavaScript syntax: public scripts, hooks, migrations and tests. PowerShell parsing: all scripts. Bash syntax and LF-only: all scripts. Git whitespace validation run after normalization.
+- Shared frontend cache version: `202609191732` on every asset in public/index.html and public/register.html.
+- Temporary browser-test server was stopped and its listener verified closed; temporary browser tabs were closed. No production server was started.
 
-## Scope / remaining work
+## Start / test
 
-- Form fields are defined in code, not a drag-and-drop form builder.
-- Data is shared across active team members; no ownership or multi-tenant isolation.
-- No production database or real admin credentials created. Run setup for the target environment.
-- Temporary preview server was stopped. Automatic command approval rejected cleanup of two synthetic test directories under OS Temp: `pb-crud-starter-test-Go7rRN` and `pb-starter-setup-8399c6223a914c259a9786f98f400d32`. These remain outside the repository; no real user data is involved.
-- Linux/macOS scripts were syntax-checked here, not executed end-to-end on those operating systems.
-- No email recovery/verification UI, audit log, CI or production hosting package. Deployment and backup operation need setup for each real application.
+```powershell
+./scripts/setup-pocketbase.ps1
+./scripts/start-pocketbase.ps1
+# http://127.0.0.1:8090/
+```
+
+Setup prompts for the operator superuser and initial application admin. Real setup/runtime data was not created, opened or migrated during development. The ignored PocketBase binary was downloaded from the pinned official release for temporary tests only.
+
+```powershell
+node tests/integration.mjs
+node tests/integration.mjs --preview
+```
+
+Preview is disposable, uses synthetic patients/accounts and prints its random credentials and URL. Ctrl+C stops it and removes temporary data. Never enter real patient information into this test server.
+
+## Explicit limitations / next work
+
+- No excluded pages/import jobs/master-data CRUD/settings UI. KPI targets are configured by a trusted operator through PocketBase, disabled until approved. No clinically endorsed default percentages.
+- One-team shared data; public signup creates active viewers. Server masking is not anonymization or tenant isolation; users with viewer access still see clinical details. Review membership before real deployment.
+- VA/biometry/refractive pass/fail are clinician-entered assessments, not inferred from free text or diopters. OU is one encounter. Denominators are assessed encounters, not all procedures; this definition must be approved locally.
+- Quality alerts derive from saved cases, with no separate acknowledgement/event store or push scheduler. Due flags use 1/7/30 elapsed days. CQI is saved by exact review month and uses last-write update behavior.
+- Audit covers case/action create/update and target updates, not every login/view/export or member edit. App accounts cannot modify it; trusted superusers can. Full audit is available via authorized API; case UI shows latest 100.
+- UI loads all authorized records for coherent pilot-scale calculations. Large datasets need server aggregation and paginated search. No offline saving or background autosave.
+- Backup/restore is operator-managed in PocketBase; reports are not backups. Browser print-to-PDF is provided, not a generated PDF template service.
+- No clinical certification, email recovery/verification UI, production deployment, multi-tenant implementation or scheduled backup. Linux/macOS startup was syntax-checked, not end-to-end executed on those OSes.

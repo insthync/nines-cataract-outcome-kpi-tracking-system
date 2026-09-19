@@ -97,7 +97,7 @@ global_args=(
 printf 'Applying database migrations...\n'
 run_migrations
 
-printf 'pb-crud-app-starter: http://%s/\n' "$http_address"
+printf 'nines-cataract-outcome-kpi-tracking-system: http://%s/\n' "$http_address"
 printf 'PocketBase dashboard: http://%s/_/\n' "$http_address"
 printf 'Press Ctrl+C to stop.\n'
 

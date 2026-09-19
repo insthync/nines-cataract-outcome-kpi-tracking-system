@@ -43,7 +43,7 @@ if ($LASTEXITCODE -ne 0 -or (($migrationOutput -join "`n") -match '(?m)^Error:')
     throw "PocketBase migrations failed."
 }
 
-Write-Host "pb-crud-app-starter: http://$HttpAddress/"
+Write-Host "nines-cataract-outcome-kpi-tracking-system: http://$HttpAddress/"
 Write-Host "PocketBase dashboard: http://$HttpAddress/_/"
 Write-Host "Press Ctrl+C to stop."
 

@@ -1,15 +1,18 @@
 # Security boundaries
 
-- Browser accounts belong to `users`, never `_superusers`.
-- Anonymous item reads and all anonymous item writes are denied by API rules. A denied list can return 200 with zero records because PocketBase rules also filter records.
-- Self-registration forces an active, unverified viewer. Verification is not required to read shared team data in this starter. Disable public registration or add an approval/verification flow if membership itself needs review.
-- Active viewer/editor/admin users can read ALL items. This is a single-team baseline, not multi-tenant isolation.
-- App admins can change another member's name, role, active status. They cannot edit their own account or arbitrary auth fields through this app API. Members are disabled rather than deleted.
-- Disabled accounts cannot log in or use an old token for protected records. Role changes are checked server-side for subsequent requests.
-- Tokens are in sessionStorage; no persistent localStorage or browser superuser credential.
-- Runtime data, binaries, logs, exports, backups and .env files are ignored by Git. Keep production secrets in a secret store.
-- Serve public/ only; never expose the repository root as static content.
+- Browser accounts authenticate to `users`, never `_superusers`. No committed credentials, binary, runtime database, backup or export. Session tokens live in sessionStorage and clear on logout/401.
+- Only `public/` is served. Source, Git metadata, scripts, hooks, migrations and SQLite are outside the static web root.
+- PocketBase rules check active user and collection for every request. Anonymous reads/writes fail; list denial may appear as an empty list. Viewer cannot write clinical data, CQI or targets. Editor cannot archive, hard-delete, manage users or configure targets. Admin can archive/restore and manage other members. No app account may forge or delete audit records.
+- Old tokens use the current server role and active status. Browser controls refresh on load/reload, not continuously; a screen already loaded can remain visible until refresh/logout.
+- Self-registration creates active, unverified viewers. All active members share one team's clinical data; there is no tenant/owner isolation. Membership is therefore a sensitive boundary. Before production, replace public enrollment with approval/verification appropriate to the organization.
+- Viewer API output masks patient name/HN and removes case notes, not merely CSS hiding. This is privacy masking, **not anonymization** or a separate data-access tier: viewers still read clinical details and can use permitted filter queries. Do not expose this system to untrusted viewers or treat aggregates/small cohorts as anonymous. Free-text diagnosis/procedure/CQI fields should not contain identifiers.
+- Executive dashboards and exports include aggregate data only. Reports do not export patient rows. CSV labels are fixed application definitions. Backups require trusted operator access through PocketBase; app roles cannot invoke superuser backup operations.
+- Server validates required fields, calendar dates, chronology, optional follow-up pairs, outcome enums, pain 0–10 and time. HN normalized uppercase, unique active encounter index. Request body whitelist blocks audit/metadata injection and unknown modifiers.
+- Case optimistic concurrency is checked inside the audit transaction. Failed writes roll back both data and audit. CQI edits use ordinary last-write behavior; coordinate concurrent review edits operationally.
+- Audit protects from application-role writes, but not trusted superuser/database modification. Patient identifiers and free-text notes/details are redacted in audit changes. Access/view/export activity is not separately audited. Do not claim clinical certification or complete compliance from these controls alone.
+- Quality alerts are derived workflow flags; no clinical decision engine, emergency notification or autonomous patient-care action exists.
+- Tests create and remove fresh OS temporary databases with synthetic records. Real `pb_data` must never be read, changed, copied or tested without explicit authorization.
 
-For internet deployment, configure HTTPS, rate limiting for auth/registration, access controls for the superuser dashboard, encrypted backups and a tested restore process. The registration honeypot is not a replacement for rate limiting. Email delivery, password recovery UI, audit trail, tenant isolation and a production deployment package are not included.
+For real deployment: certify the data definitions/workflow with the organization, enforce reviewed membership, use HTTPS and rate limits, restrict the PocketBase dashboard, establish encrypted backups and restore drills, and define retention/access policies. No production deployment or real patient database was created during development. Email recovery UI, automatic backups and multi-tenant controls are outside this deliverable.
 
-Setup scripts pass credentials to the PocketBase CLI or local bootstrap server. Run them on a trusted machine and use interactive password prompts rather than shell history. Choose a new runtime data directory for each app. Do not copy real source-project data for testing.
+Setup passes credentials to local CLI/bootstrap processes. Use trusted machines and interactive prompts; never paste real passwords into command history or source files.

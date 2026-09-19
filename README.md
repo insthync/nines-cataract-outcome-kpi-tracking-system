@@ -1,10 +1,10 @@
-# pb-crud-app-starter
+# nines-cataract-outcome-kpi-tracking-system
 
-ชุดเริ่มต้นเว็บภาษาไทย: HTML/CSS/JavaScript + PocketBase 0.39.8 + SQLite ไม่มี framework หรือขั้นตอน build
+เว็บภาษาไทยสำหรับติดตามผลลัพธ์การผ่าตัดต้อกระจก พัฒนาต่อจาก `pb-crud-app-starter` ด้วย HTML/CSS/JavaScript + PocketBase **0.39.8** + SQLite ไม่มี framework หรือ frontend build
 
-มีระบบสมัครสมาชิก เข้าสู่ระบบ สิทธิ์ viewer/editor/admin หน้า admin จัดการสมาชิก และฟอร์มรายการงานที่เพิ่ม ดู แก้ไข ลบ ค้นหา กรองสถานะ และแบ่งหน้าได้
+ระบบเริ่มต้น **ไม่มีข้อมูลผู้ป่วย** และไม่สร้างข้อมูลตัวอย่างสำหรับคำนวณ KPI ข้อมูลสมมติใช้เฉพาะการทดสอบบนฐานข้อมูลใน OS Temp
 
-## เริ่มใช้งานบน Windows
+## เปิดใช้งานบน Windows
 
 เปิด PowerShell ในโฟลเดอร์โปรเจค:
 
@@ -13,76 +13,84 @@
 ./scripts/start-pocketbase.ps1
 ```
 
-Setup จะถามอีเมล/รหัสผ่านสองบัญชี: PocketBase superuser สำหรับดูแลระบบ และบัญชีแอปเริ่มต้นที่มี role admin รหัสผ่านไม่ถูกบันทึกในไฟล์โปรเจค
+Setup ดาวน์โหลด PocketBase ตาม version ที่ pin ไว้ ถามบัญชี superuser สำหรับดูแลระบบและบัญชีแอป role admin โดยไม่เขียนรหัสผ่านลง source code จากนั้น start ใช้ migration และเปิดเว็บ:
 
 - แอป: http://127.0.0.1:8090/
 - PocketBase dashboard: http://127.0.0.1:8090/_/
-- หยุดเซิร์ฟเวอร์ด้วย Ctrl+C
+- หยุดด้วย Ctrl+C
 
-Setup ดาวน์โหลด binary ที่ pin version ไว้ หากมี version ตรงกันอยู่แล้วจะใช้ไฟล์เดิม การรัน setup ซ้ำด้วยอีเมลเดิมจะอัปเดตบัญชีและรหัสผ่านนั้น
+บัญชีแอปกับ superuser เป็นคนละประเภท ห้ามใช้ superuser เข้าหน้าแอป บัญชีสมัครใหม่เป็น viewer เสมอ ผู้ดูแลแอปเปลี่ยนสิทธิ์สมาชิกได้จากเมนูจัดการสมาชิก
+
+สำหรับฐานข้อมูลทดลองที่แยกจากข้อมูลเดิม ใช้ `-DataDirectory` ของ setup และ start ให้เป็น directory เดียวกันที่สร้างขึ้นใหม่ อ่านตัวเลือกด้วย `Get-Help ./scripts/setup-pocketbase.ps1` ห้ามคัดลอกฐานข้อมูลผู้ป่วยจริงมาทดสอบ
 
 ## Linux / macOS
 
-ต้องมี Bash, curl, unzip และเครื่องมือระบบพื้นฐาน จากนั้นรัน:
+ต้องมี Bash, curl และ unzip:
 
 ```bash
 bash scripts/setup-pocketbase.sh
 bash scripts/start-pocketbase.sh
 ```
 
-อ่าน options ด้วย `bash scripts/setup-pocketbase.sh --help` หรือ `Get-Help ./scripts/setup-pocketbase.ps1` บน Windows ตัวแปร `PB_SUPERUSER_EMAIL`, `PB_SUPERUSER_PASSWORD`, `PB_STAFF_EMAIL`, `PB_STAFF_PASSWORD`, `PB_STAFF_NAME`, `PB_STAFF_ROLE` ใช้กับ setup ได้ ห้าม commit ค่า credentials
+ใช้ `--help` เพื่อดูตัวเลือก scripts ทดสอบ syntax บนเครื่องพัฒนาแล้ว แต่ยังไม่ได้รันทดสอบปลายทางบน Linux/macOS
 
-## สิทธิ์เริ่มต้น
+## หน้าที่ทำแล้ว
 
-| ผู้ใช้ | อ่านรายการ | เพิ่ม/แก้ไข/ลบรายการ | จัดการสมาชิก |
-| --- | --- | --- | --- |
-| ยังไม่เข้าสู่ระบบ | ไม่ได้ | ไม่ได้ | ไม่ได้ |
-| viewer | ได้ | ไม่ได้ | ไม่ได้ |
-| editor | ได้ | ได้ | ไม่ได้ |
-| admin | ได้ | ได้ | เปลี่ยนชื่อ/สิทธิ์/เปิดปิดบัญชีอื่น |
+- **Dashboard**: จำนวนผ่าตัด, KPI 6 ตัวพร้อมตัวตั้ง/ตัวหาร/ข้อมูลขาด, สถานะเป้าหมาย, แนวโน้มรายเดือน, Data Quality และ Quality Alerts
+- **Case Registry / Add New Case**: ค้นหา แบ่งหน้า ดู/เพิ่ม/แก้ไข ข้อมูลผ่าตัด เลนส์ และผลลัพธ์ตามฟอร์มอ้างอิง พร้อม Created/Updated By, เวลาบันทึก, Unsaved changes และการป้องกันบันทึกซ้ำ
+- **Follow-up**: VA และวันที่ Day 1, 1 สัปดาห์, 1 เดือน กรองรายการติดตามครบ/ยังไม่ครบ
+- **Monthly Statistics / Trend Analysis**: รายเดือน รายไตรมาส YTD ทั้งปี และเทียบปีต่อปี จัด cohort ตามวันที่ผ่าตัด
+- **Quality Alert / CQI**: Critical / High / Monitor จากข้อมูลที่บันทึกจริง และแผนทบทวนรายเดือน Plan / Do / Check / Act ที่บันทึกลงฐานข้อมูล
+- **Reports**: ส่งออก CSV สถิติรวม และพิมพ์/บันทึก PDF ผ่าน browser โดยไม่รวมชื่อหรือ HN
+- **สมาชิก**: สมัคร เข้าสู่ระบบ ออกจากระบบ และหน้า admin จัดการชื่อ บทบาท และเปิด/ปิดสมาชิก
 
-ทุกบัญชีที่ active และเข้าสู่ระบบอ่านรายการทั้งหมดร่วมกันได้ นี่เป็นฐานสำหรับทีมเดียว ยังไม่มี tenant หรือข้อมูลส่วนตัวแยกเจ้าของ ผู้สมัครใหม่เป็น viewer เสมอ การเปลี่ยนสิทธิ์มีผลกับ API ทันที ส่วน UI จะตรวจ session ใหม่เมื่อโหลดรายการ
+ตามขอบเขตที่ยืนยัน **ไม่ทำหน้า KPI Monitoring, Data Import, Master Data และ Settings** ไม่มี workflow นำเข้า Excel/CSV หรือ import jobs
 
-บัญชี admin ในแอปใช้ collection `users` ไม่มีสิทธิ์ superuser ไม่สามารถแก้ไขตนเอง ลบสมาชิก เปลี่ยนรหัสผ่าน หรือเปลี่ยนอีเมลผ่านหน้า admin นี้ได้ บัญชีแรกและการกู้สิทธิ์จัดการผ่าน setup/PocketBase dashboard
+ต้นแบบที่ใช้ตรวจฟอร์ม: https://opdeyeschedule-sp.my.canva.site/cataract-outcome-kpi-tracking-system
 
-## โครงสร้าง
+## สิทธิ์
 
-```text
-public/                    ไฟล์ที่ส่งให้ browser เท่านั้น
-  index.html               เข้าสู่ระบบ รายการงาน หน้า admin และ dialog
-  app.js                   UI, CRUD, ค้นหา และแบ่งหน้า
-  api.js                   REST client และ sessionStorage
-  config.js                ชื่อแอป URL API ชื่อ collection และขนาดหน้า
-  register.html/js          สมัครสมาชิก
-  styles.css               หน้าจอ desktop/mobile
-pocketbase/pb_migrations/   Schema และ API rules
-pocketbase/pb_hooks/        สมัครสมาชิกและตรวจสอบข้อมูลฝั่ง server
-scripts/                   ดาวน์โหลด ติดตั้ง เริ่มระบบ (PowerShell/Bash)
-tests/integration.mjs       ทดสอบ API บนฐานข้อมูลชั่วคราว
-docs/                      วิธีปรับใช้และสถานะส่งต่องาน
-```
+| บทบาท | อ่านข้อมูล | เพิ่ม/แก้เคสและ CQI | ยกเลิก/คืนเคส | สมาชิก / Audit |
+| --- | --- | --- | --- | --- |
+| viewer / ผู้บริหาร | ได้ โดยปกปิดชื่อและ HN | ไม่ได้ | ไม่ได้ | ไม่ได้ |
+| editor / เจ้าหน้าที่ | ได้ | ได้ | ไม่ได้ | ไม่ได้ |
+| admin | ได้ | ได้ | ได้ | ได้ |
 
-ให้ PocketBase serve เฉพาะ `public/` ตาม scripts ที่ให้มา ไม่ใช้ repository root เป็น public directory
+กฎบังคับที่ PocketBase API ไม่ได้อาศัยการซ่อนปุ่มอย่างเดียว เคสใช้การยกเลิกแบบคืนรายการได้แทนการลบถาวร เคสที่ยกเลิกไม่รวม KPI ข้อมูลเป็นทีมเดียว ไม่มี tenant หรือการแยกตามเจ้าของ
 
-## นำไปสร้างโปรเจคใหม่
+## นิยาม KPI และเป้าหมาย
 
-1. ใช้ source repository นี้เป็น GitHub template หรือคัดลอก source ไป repository ใหม่ ดู [CUSTOMIZE.md](docs/CUSTOMIZE.md)
-2. เปลี่ยนชื่อแอปใน `public/config.js`, title/brand ใน HTML และเอกสาร
-3. เพิ่ม migration สำหรับ schema ที่ต้องการ แล้วปรับฟอร์ม payload และการแสดงผล
-4. รัน setup เพื่อสร้างฐานข้อมูลและบัญชีของโปรเจคใหม่
+- VA, Biometry และ Refractive: จำนวนผล `pass` / จำนวนที่ประเมิน `pass` หรือ `fail`
+- Endophthalmitis, Wound leak, Re-operation: จำนวน `yes` / จำนวนที่ประเมิน `yes` หรือ `no`
+- ค่าว่างไม่ใช่ `no` และไม่ถูกนับในตัวหาร แสดง N/A เมื่อไม่มีข้อมูล และสถานะข้อมูลไม่เพียงพอเมื่อไม่ถึงจำนวนขั้นต่ำ
+- VA / Biometry / Refractive เป็นผลประเมินที่เจ้าหน้าที่บันทึกตามฟอร์มต้นแบบ ไม่ได้แปลงข้อความ VA หรือคำนวณจากค่า diopter โดยอัตโนมัติ
+- Pain score 0–10 แยกค่าว่างจากศูนย์; รายงานแสดงค่าเฉลี่ยเฉพาะที่บันทึก
+- หน่วยนับเป็น **รายการผ่าตัด**: OU นับหนึ่งรายการ ไม่แยกเป็นสองตา
 
-ไม่คัดลอก `pb_data`, `.git`, credentials, exports หรือ backups จากโปรเจคที่มีข้อมูลอยู่แล้ว ตัว binary ไม่ถูกติดตามใน Git และดาวน์โหลดใหม่ได้ ไม่มีข้อมูลคนไข้หรือบัญชีจริงจาก OR Planning Board รวมอยู่ใน starter
+Migration สร้างเฉพาะ metadata `kpi_targets` 6 แถว โดย `enabled=false` ทุกตัว ไม่มีเป้าหมายทางคลินิกที่เปิดใช้อัตโนมัติ ผู้ดูแลระบบตั้ง `target`, `min_sample` และ `enabled` ใน PocketBase dashboard หลังหน่วยงานรับรองเกณฑ์แล้ว (ไม่มีหน้า Settings ตามขอบเขต) ค่า direction มาจากนิยามตัวชี้วัดและห้ามเปลี่ยนผ่านบัญชีแอป
 
-## ทดสอบ
+## ทดสอบ / ทดลองด้วยข้อมูลสมมติ
 
-ใช้ Node.js 22+ เฉพาะการทดสอบ (การรันแอปไม่ต้องมี Node):
+ต้องมี Node.js 22+ และ binary จาก setup หรือ download script:
 
 ```powershell
+./scripts/download-pocketbase.ps1
 node tests/integration.mjs
+node tests/integration.mjs --preview
 ```
 
-ต้องมี PocketBase binary ก่อน ทดสอบสร้าง database ใน OS temp directory และลบหลังจบ ไม่เปิดฐานข้อมูลจริง `--preview` จะคง test server ไว้พร้อมข้อมูลสมมติและบัญชีรหัสผ่านสุ่มเพื่อทดสอบ browser หยุดด้วย Ctrl+C
+Tests สร้าง SQLite ใหม่ใน OS temporary directory, ใช้ข้อมูลสมมติ, รหัสผ่านสุ่ม และลบหลังทดสอบ ไม่เปิด `pocketbase/pb_data` จริง `--preview` คง test server ไว้และแสดง URL/บัญชีสำหรับลองใช้ กด Ctrl+C เพื่อหยุดและลบฐานข้อมูลทดสอบ **ห้ามนำข้อมูลจริงเข้าหน้า preview**
 
-ดูขอบเขตสิทธิ์และการใช้งานใน [ARCHITECTURE.md](docs/ARCHITECTURE.md), [SECURITY.md](docs/SECURITY.md) และผลตรวจล่าสุดใน [HANDOFF.md](docs/HANDOFF.md)
+ผลทดสอบและข้อจำกัดล่าสุด: [docs/HANDOFF.md](docs/HANDOFF.md)
 
-Starter รุ่นนี้ใช้ฟอร์มที่กำหนดในโค้ด ยังไม่มี Form Builder, email verification/reset flow, audit log, CI หรือชุด deploy production สำเร็จรูป
+## โครงสร้างและข้อจำกัด
+
+- `public/`: static web root เท่านั้น; `app.js` UI, `api.js` session/REST, `clinical.js` pure KPI calculations
+- `pocketbase/pb_migrations/1789810000_cataract.js`: schema ใหม่ โดยไม่แก้ migration เดิม; collection `items` เดิมคงข้อมูลไว้แต่ปิด API สำหรับบัญชีแอป
+- `pocketbase/pb_hooks/cataract.pb.js`: validation, revision conflict, audit ใน transaction, viewer masking
+- `tests/`: integration/security และ calculation tests
+- `docs/ARCHITECTURE.md`, `docs/SECURITY.md`: สัญญาข้อมูลและขอบเขตความปลอดภัย
+
+Prototype สำหรับทดสอบ Workflow ต้องรับรองฐานข้อมูล ระบบสิทธิ์ นิยาม KPI และกระบวนการคลินิกก่อนใช้จริง ไม่มีการแจ้งเตือนฉุกเฉินหรือการวินิจฉัยอัตโนมัติ Quality Alerts คำนวณจากเคสที่บันทึก ไม่ใช่บริการแจ้งเตือนเบื้องหลัง
+
+การสำรอง/กู้ฐานข้อมูลใช้ PocketBase dashboard ของผู้ดูแลระบบ แยกจาก CSV รายงานและไม่เปิดให้บัญชีแอปทำ backup ไม่มี scheduled backup, email recovery UI, multi-tenant หรือ deployment production สำเร็จรูป

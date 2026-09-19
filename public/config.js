@@ -1,6 +1,6 @@
 window.APP_CONFIG = Object.freeze({
-  appName: "pb-crud-app-starter",
+  appName: "nines-cataract-outcome-kpi-tracking-system",
   pocketBaseUrl: window.location.origin,
-  collection: "items",
+  collection: "cases",
   pageSize: 10,
 });
