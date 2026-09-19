@@ -2,8 +2,8 @@
 <html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#113b5b"><title>Cataract Outcome KPI Tracking System</title>
-<link rel="stylesheet" href="styles.css?v=202609200431">
-<script src="config.js?v=202609200431" defer></script><script src="api.js?v=202609200431" defer></script><script src="clinical.js?v=202609200431" defer></script><script src="app.js?v=202609200431" defer></script>
+<link rel="stylesheet" href="styles.css?v=202609200438">
+<script src="config.js?v=202609200438" defer></script><script src="api.js?v=202609200438" defer></script><script src="clinical.js?v=202609200438" defer></script><script src="app.js?v=202609200438" defer></script>
 </head><body>
 <header class="topbar"><button id="mobile-menu-toggle" type="button" class="secondary" aria-label="เปิดเมนูหลัก" aria-controls="mobile-menu" aria-expanded="false" hidden><span aria-hidden="true">☰</span></button><a class="brand" href="./"><span class="mark">◎</span><span>Cataract Outcome<small>KPI Tracking System</small></span></a><div id="account" hidden><span id="account-name"></span><button id="logout" class="quiet">ออกจากระบบ</button></div></header>
 <main>
@@ -18,6 +18,7 @@
 <button data-view="trend">↗ <span>แนวโน้มผลลัพธ์<small>Trend Analysis</small></span></button>
 <button data-view="quality">◇ <span>คุณภาพและการทบทวน<small>Quality Alert · CQI</small></span></button>
 <button data-view="reports">▤ <span>รายงาน<small>Reports</small></span></button>
+<button id="targets-tab" data-view="targets" hidden>◎ <span>เป้าหมาย KPI<small>KPI Targets</small></span></button>
 <button id="users-tab" data-view="users" hidden>♙ <span>จัดการสมาชิก<small>Admin</small></span></button>
 </nav><p class="sidebar-note">Measure · Monitor · Improve<br>ข้อมูลผู้ป่วยเป็นความลับ</p></aside>
 <div class="content"><div class="page-heading"><div><p class="eyebrow">CATARACT OUTCOME / QUALITY & SAFETY</p><h1 id="page-title">ภาพรวมผู้บริหาร</h1><p id="page-description" class="muted">ติดตามคุณภาพจากข้อมูลที่บันทึกจริง</p></div><button id="refresh" class="secondary">↻ โหลดข้อมูลใหม่</button></div>
@@ -27,6 +28,16 @@
 <div id="view-content"></div>
 </div></section></main>
 <dialog id="mobile-menu" class="mobile-menu" aria-labelledby="mobile-menu-title"><div class="mobile-menu-heading"><h2 id="mobile-menu-title">เมนูหลัก</h2><button id="mobile-menu-close" type="button" aria-label="ปิดเมนูหลัก">✕</button></div></dialog>
+<dialog id="target-dialog" aria-labelledby="target-title"><form id="target-form">
+<div class="dialog-heading"><h2 id="target-title">แก้ไขเป้าหมาย KPI</h2><button type="button" class="quiet" data-close="target-dialog" aria-label="ปิดเป้าหมาย KPI">✕</button></div>
+<p id="target-label" class="kpi-label"></p><p id="target-direction" class="muted"></p>
+<fieldset id="target-fields"><label>เป้าหมาย (%)<input name="target" type="number" min="0" max="100" step="any" required></label>
+<label>จำนวนข้อมูลขั้นต่ำ (ราย)<input name="min_sample" type="number" min="1" step="1" required></label>
+<label class="checkbox"><input name="enabled" type="checkbox">เปิดใช้การประเมินตามเป้าหมาย</label></fieldset>
+<p class="muted">ใช้เกณฑ์ที่หน่วยงานรับรอง ค่าใหม่จะใช้ประเมินข้อมูลทุกช่วงเวลาใน Dashboard และรายงาน การปิดใช้งานยังคงแสดงค่าผลลัพธ์จริง แต่ไม่ตัดสินผ่าน/ไม่ผ่านเป้าหมาย</p>
+<p id="target-save-state" class="muted" role="status"></p><p id="target-error" class="error" role="alert"></p><div id="target-history" class="muted"></div>
+<div class="dialog-actions"><button type="button" class="secondary" data-close="target-dialog">ยกเลิก</button><button type="submit">บันทึกเป้าหมาย</button></div>
+</form></dialog>
 <dialog id="case-dialog" aria-labelledby="case-title"><form id="case-form"><div class="dialog-heading"><div><p class="eyebrow">CASE RECORD</p><h2 id="case-title">เพิ่มผู้ป่วยใหม่</h2></div><button type="button" class="quiet" data-close="case-dialog" aria-label="ปิดฟอร์ม">✕</button></div><p id="save-state" class="muted" role="status"></p><fieldset id="case-fields"></fieldset><p id="case-error" class="error" role="alert"></p><div id="case-audit" class="muted"></div><div class="dialog-actions"><button type="button" class="secondary" data-close="case-dialog">ยกเลิก / ปิด</button><button id="save-case" type="submit">บันทึก</button></div></form></dialog>
 <dialog id="user-dialog" aria-labelledby="user-title"><form id="user-form"><h2 id="user-title">แก้ไขสมาชิก</h2><label>ชื่อที่แสดง<input name="name" maxlength="120" required></label><label>สิทธิ์<select name="role"><option value="viewer">ผู้ชม (viewer)</option><option value="editor">พยาบาล / เจ้าหน้าที่ (editor)</option><option value="admin">ผู้ดูแล (admin)</option></select></label><label class="checkbox"><input name="active" type="checkbox">เปิดใช้งานบัญชี</label><p id="user-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" class="secondary" data-close="user-dialog">ยกเลิก</button><button type="submit">บันทึกสมาชิก</button></div></form></dialog>
 <dialog id="action-dialog" aria-labelledby="action-title"><form id="action-form"><h2 id="action-title">Monthly Quality Review · CQI/PDCA</h2><fieldset id="action-fields"><div class="form-grid"><label>เดือนทบทวน<input name="month" type="month" required></label><label>ครบกำหนด<input name="due_date" type="date" required></label></div><label>ประเด็นทบทวน<input name="title" maxlength="200" required></label><label>ผู้รับผิดชอบ<input name="owner" maxlength="120" required></label><label>ขั้นตอน<select name="stage"><option value="plan">Plan · วางแผน</option><option value="do">Do · ดำเนินการ</option><option value="check">Check · ตรวจผล</option><option value="act">Act · ปรับปรุงมาตรฐาน</option></select></label><label>แผน / ผลทบทวน (ไม่ระบุข้อมูลผู้ป่วย)<textarea name="detail" rows="4" maxlength="4000"></textarea></label></fieldset><p id="action-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" class="secondary" data-close="action-dialog">ปิด</button><button id="save-action" type="submit">บันทึกแผน</button></div></form></dialog>

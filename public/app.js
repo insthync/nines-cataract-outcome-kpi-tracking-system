@@ -3,10 +3,11 @@
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   const button = (text, fn, cls = 'secondary') => { const b = el('button', cls, text); b.type = 'button'; b.onclick = fn; return b; };
   const roles = {viewer:'ผู้ชม',editor:'เจ้าหน้าที่',admin:'ผู้ดูแล'};
-  const titles = {dashboard:'ภาพรวมผู้บริหาร',registry:'ทะเบียนผ่าตัด',followup:'ติดตามผลหลังผ่าตัด',monthly:'สถิติรายเดือน',trend:'แนวโน้มผลลัพธ์',quality:'คุณภาพและการทบทวน',reports:'รายงานผลลัพธ์',users:'จัดการสมาชิก'};
+  const titles = {dashboard:'ภาพรวมผู้บริหาร',registry:'ทะเบียนผ่าตัด',followup:'ติดตามผลหลังผ่าตัด',monthly:'สถิติรายเดือน',trend:'แนวโน้มผลลัพธ์',quality:'คุณภาพและการทบทวน',reports:'รายงานผลลัพธ์',users:'จัดการสมาชิก',targets:'เป้าหมาย KPI'};
   const state = {view:'dashboard',cases:[],targets:[],actions:[],users:[],editing:null,user:null,action:null,generation:0,dirty:false,saving:false,search:'',filter:'',page:1,loaded:false};
   const path = name => `/api/collections/${name}/records`;
   const canWrite = () => ['editor','admin'].includes(API.user?.role);
+  const targetState = {editing:null,dirty:false,saving:false};
   const mobileLayout = window.matchMedia('(max-width: 760px)');
   const menuDialog = $('#mobile-menu');
   function closeMenu() { if (menuDialog.open) menuDialog.close(); $('#mobile-menu-toggle').setAttribute('aria-expanded', 'false'); }
@@ -70,6 +71,8 @@
     if (!active) closeMenu();
     $('#account-name').textContent=active?`${API.user.name} · ${roles[API.user.role]}`:'';
     $('#users-tab').hidden=API.user?.role!=='admin'; $('#add-case-button').hidden=!canWrite();
+    $('#targets-tab').hidden=API.user?.role!=='admin';
+    if (!active) { targetState.dirty=false; targetState.editing=null; }
     if(!active){state.generation++;state.cases=[];state.targets=[];state.actions=[];state.users=[];state.loaded=false;$('#view-content').replaceChildren();document.querySelectorAll('dialog[open]').forEach(d=>d.close());state.dirty=false;}
   }
   async function all(name) {
@@ -80,7 +83,7 @@
     const gen=++state.generation; state.loaded=false; $('#view-content').replaceChildren(el('p','empty','กำลังโหลดข้อมูล…')); $('#refresh').disabled=true;
     try {
       await API.refresh(); if(gen!==state.generation || !API.user)return;sessionUI();
-      if(state.view==='users' && API.user.role!=='admin')state.view='dashboard';
+      if(['users','targets'].includes(state.view) && API.user.role!=='admin')state.view='dashboard';
       const [cases,targets,actions,users]=await Promise.all([all('cases'),all('kpi_targets'),all('quality_actions'),API.user.role==='admin'?all('users'):[]]);
       if(gen!==state.generation)return;
       Object.assign(state,{cases,targets,actions,users,loaded:true});render();
@@ -126,11 +129,13 @@
   function setView(view){closeMenu();state.view=view;state.page=1;state.search='';state.filter='';notice('');render();}
   function render(){
     if(!state.loaded)return;
+    if (['users','targets'].includes(state.view) && API.user?.role!=='admin') state.view='dashboard';
     $('#page-title').textContent=titles[state.view];$('#page-description').textContent=state.view==='users'?'กำหนดบทบาทและสถานะบัญชีของทีม':'ข้อมูลจริงที่บันทึกในระบบ · ไม่ใช้ข้อมูลตัวอย่างคำนวณ KPI';
     document.querySelectorAll('[data-view]').forEach(b=>{b.classList.toggle('selected',b.dataset.view===state.view);b.setAttribute('aria-pressed',String(b.dataset.view===state.view));});
-    $('#period-form').hidden=['registry','followup','users'].includes(state.view);
+    $('#period-form').hidden=['registry','followup','users','targets'].includes(state.view);
     const root=$('#view-content');root.replaceChildren();const cases=selected();$('#period-summary').textContent=`${cases.length} รายการผ่าตัด · ตามวันที่ผ่าตัด`;
     if(state.view==='users'){renderUsers(root);return;}
+    if(state.view==='targets'){renderTargets(root);return;}
     if(['registry','followup'].includes(state.view)){renderRegistry(root);return;}
     if(state.view==='dashboard'){
       const summaries=el('div','summary-grid');summaries.append(card('ผ่าตัดในช่วงเวลา',cases.length,'จำนวนรายการที่ยังใช้งาน'),card('ติดตามครบ 1 เดือน',cases.filter(c=>c.month1_va).length,'มีวันที่และค่า VA'),card('ประเด็นที่ต้องติดตาม',Clinical.alerts(cases,today()).length,'รวมภาวะแทรกซ้อนและข้อมูลขาด'));
@@ -168,6 +173,40 @@
     $('#case-dialog').showModal();
   }
   function renderUsers(root){const p=panel('สมาชิกทีม');state.users.forEach(u=>{const r=el('article','record');r.append(el('strong','',u.name),el('span','badge',`${roles[u.role]} · ${u.active?'เปิด':'ปิด'}ใช้งาน`));if(u.id!==API.user.id)r.append(button('แก้ไขสมาชิก',()=>{state.user=u;const f=$('#user-form');f.elements.name.value=u.name;f.elements.role.value=u.role;f.elements.active.checked=u.active;$('#user-error').textContent='';$('#user-dialog').showModal();}));else r.append(el('span','muted','บัญชีของคุณ'));p.append(r);});root.append(p);}
+  function renderTargets(root) {
+    $('#page-description').textContent='กำหนดเกณฑ์ประเมินผลลัพธ์และจำนวนข้อมูลขั้นต่ำสำหรับทีม';
+    const p=panel('เกณฑ์ประเมิน KPI');
+    p.append(el('p','muted','จัดการค่าเป้าหมายของตัวชี้วัดทั้ง 6 รายการ ชื่อและทิศทางเกณฑ์ยึดตามนิยามตัวชี้วัด'));
+    const grid=el('div','target-grid');
+    state.targets.forEach(t=>{
+      const card=el('article','target-card');
+      card.append(el('span',`badge ${t.enabled?'done':'off'}`,t.enabled?'เปิดประเมิน':'ปิดประเมิน'),el('h3','',t.label),el('strong','target-value',`${t.direction==='gte'?'≥':'≤'} ${t.target}%`),el('p','muted',`ข้อมูลขั้นต่ำ ${t.min_sample} รายที่ประเมิน`),el('p','record-meta',t.updated?`อัปเดต ${t.updated}`:'ยังไม่มีการแก้ไข'),button('แก้ไขเป้าหมาย',()=>openTarget(t)));
+      grid.append(card);
+    });
+    if (!state.targets.length) empty(p,'ไม่พบรายการเป้าหมาย KPI กรุณาตรวจสอบการติดตั้งฐานข้อมูล');
+    p.append(grid);root.append(p);
+  }
+  function openTarget(target) {
+    if (API.user?.role!=='admin') return;
+    targetState.editing=target;targetState.dirty=false;
+    const f=$('#target-form');f.elements.target.value=target.target;f.elements.min_sample.value=target.min_sample;f.elements.enabled.checked=target.enabled;
+    $('#target-label').textContent=target.label;
+    $('#target-direction').textContent=target.direction==='gte'?'ผ่านเมื่อผลลัพธ์มากกว่าหรือเท่ากับเป้าหมาย (≥)':'ผ่านเมื่อผลลัพธ์น้อยกว่าหรือเท่ากับเป้าหมาย (≤)';
+    $('#target-error').textContent='';$('#target-save-state').textContent=`บันทึกล่าสุด ${target.updated || 'ยังไม่มี'}`;
+    $('#target-history').replaceChildren(button('ดูประวัติเป้าหมาย',async()=>{
+      try {
+        const data=await API.request(`${path('audit_logs')}?perPage=20&sort=-created&filter=${encodeURIComponent(`entity = "kpi_targets" && record_id = "${target.id}"`)}`);
+        if (targetState.editing?.id!==target.id) return;
+        const names={target:'เป้าหมาย (%)',min_sample:'ข้อมูลขั้นต่ำ',enabled:'เปิดประเมิน'};
+        $('#target-history').replaceChildren(...data.items.map(a=>{
+          const changes=Object.entries(a.changes||{}).filter(([k])=>names[k]).map(([k,v])=>`${names[k]}: ${String(v.before)} → ${String(v.after)}`).join(' · ');
+          return el('p','',`${a.created} · ผู้แก้ไข ${a.actor} · ${changes}`);
+        }));
+        if (!data.items.length) $('#target-history').textContent='ยังไม่มีประวัติการแก้ไข';
+      } catch(e) { $('#target-error').textContent=e.message; }
+    }));
+    $('#target-dialog').showModal();
+  }
   function renderActions(root){const p=panel('Monthly Quality Review · CQI / PDCA');if(canWrite())p.append(button('＋ เพิ่มแผนปรับปรุง',()=>openAction()));const actions=state.actions.filter(a=>a.month===$('#period-month').value);if(!actions.length)empty(p,'ยังไม่มีแผนทบทวนในเดือนอ้างอิง');actions.forEach(a=>{const row=el('article','record');const info=el('div');info.append(el('h3','record-title',a.title),el('p','muted',`${a.owner} · ครบกำหนด ${a.due_date}`));row.append(info,el('span','badge',a.stage.toUpperCase()),button('เปิดแผน',()=>openAction(a)));p.append(row);});root.append(p);}
   function openAction(record=null){state.action=record;const f=$('#action-form');f.reset();['month','due_date','title','owner','stage','detail'].forEach(k=>{f.elements[k].value=record?.[k]??({month:$('#period-month').value,stage:'plan'}[k]||'');});$('#action-fields').disabled=!canWrite();$('#save-action').hidden=!canWrite();$('#action-error').textContent='';$('#action-dialog').showModal();}
   function exportReport(cases){const rows=[['Cataract Outcome Report'],['ช่วงเวลา',$('#period-month').value,$('#period-mode').value],['วันที่สร้าง',today()],['KPI','Numerator','Denominator','Percent','Missing'],...Clinical.kpis(cases,state.targets).map(k=>[k.label,k.numerator,k.denominator,k.value===null?'N/A':k.value.toFixed(2),k.missing])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=el('a');a.href=url;a.download=`cataract-outcome-${$('#period-month').value}-${$('#period-mode').value}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('ส่งออกสถิติจากข้อมูลที่บันทึกแล้ว');}
@@ -176,11 +215,26 @@
   $('#case-form').oninput=()=>{state.dirty=true;$('#save-state').textContent='มีการแก้ไขที่ยังไม่ได้บันทึก (Unsaved changes)';};
   $('#case-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#case-error',async()=>{state.saving=true;$('#save-state').textContent='กำลังบันทึก…';try{const body={};fieldNames.forEach(k=>{body[k]=f.elements[k].value.trim();});if(state.editing)body.revision=state.editing.revision;await API.request(path('cases')+(state.editing?'/'+state.editing.id:''),{method:state.editing?'PATCH':'POST',body});state.dirty=false;$('#case-dialog').close();await load();notice('บันทึกสำเร็จ • Dashboard และ KPI อัปเดตแล้ว');}catch(err){$('#save-state').textContent='ยังไม่บันทึก — ตรวจข้อผิดพลาดและลองใหม่';throw err;}finally{state.saving=false;}});};
   $('#user-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#user-error',async()=>{await API.request(path('users')+'/'+state.user.id,{method:'PATCH',body:{name:f.elements.name.value.trim(),role:f.elements.role.value,active:f.elements.active.checked}});$('#user-dialog').close();await load();notice('บันทึกสมาชิกแล้ว');});};
+  $('#target-form').oninput=()=>{targetState.dirty=true;$('#target-save-state').textContent='มีการแก้ไขที่ยังไม่ได้บันทึก';};
+  $('#target-form').onsubmit=e=>{
+    const f=e.currentTarget;
+    submit(e,'#target-error',async()=>{
+      const target=Number(f.elements.target.value),min_sample=Number(f.elements.min_sample.value);
+      if (!Number.isFinite(target)||target<0||target>100||!Number.isInteger(min_sample)||min_sample<1) throw new Error('เป้าหมายต้องอยู่ระหว่าง 0–100 และจำนวนข้อมูลขั้นต่ำต้องเป็นจำนวนเต็มตั้งแต่ 1');
+      targetState.saving=true;$('#target-save-state').textContent='กำลังบันทึก…';
+      try {
+        await API.request(`${path('kpi_targets')}/${targetState.editing.id}`,{method:'PATCH',body:{target,min_sample,enabled:f.elements.enabled.checked}});
+        targetState.dirty=false;$('#target-dialog').close();await load();notice('บันทึกเป้าหมาย KPI แล้ว • เกณฑ์ใหม่ใช้กับ Dashboard และรายงาน');
+      } catch(error) {$('#target-save-state').textContent='ยังไม่บันทึก กรุณาตรวจสอบและลองใหม่';throw error;}
+      finally {targetState.saving=false;}
+    });
+  };
   $('#action-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#action-error',async()=>{await API.request(path('quality_actions')+(state.action?'/'+state.action.id:''),{method:state.action?'PATCH':'POST',body:Object.fromEntries(new FormData(f))});$('#action-dialog').close();await load();notice('บันทึกแผนปรับปรุงแล้ว');});};
   function ask(message){return new Promise(resolve=>{const dialog=$('#confirm-dialog');$('#confirm-message').textContent=message;const finish=value=>{dialog.close();resolve(value);};$('#confirm-yes').onclick=()=>finish(true);$('#confirm-no').onclick=()=>finish(false);dialog.oncancel=e=>{e.preventDefault();finish(false);};dialog.showModal();});}
-  async function closeDialog(id){if(id==='case-dialog' && (state.saving || state.dirty&&!await ask('ยังมีข้อมูลที่ไม่ได้บันทึก ต้องการยกเลิกการแก้ไข?')))return;$('#'+id).close();if(id==='case-dialog')state.dirty=false;}
+  async function closeDialog(id){if(id==='case-dialog' && (state.saving || state.dirty&&!await ask('ยังมีข้อมูลที่ไม่ได้บันทึก ต้องการยกเลิกการแก้ไข?')))return;if(id==='target-dialog' && (targetState.saving || targetState.dirty&&!await ask('ยังมีเป้าหมายที่ไม่ได้บันทึก ต้องการยกเลิกการแก้ไข?')))return;$('#'+id).close();if(id==='case-dialog')state.dirty=false;if(id==='target-dialog')targetState.dirty=false;}
   document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeDialog(b.dataset.close));$('#case-dialog').addEventListener('cancel',e=>{e.preventDefault();closeDialog('case-dialog');});
-  window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.returnValue='';}});
+  $('#target-dialog').addEventListener('cancel',e=>{e.preventDefault();closeDialog('target-dialog');});
+  window.addEventListener('beforeunload',e=>{if(state.dirty||targetState.dirty){e.preventDefault();e.returnValue='';}});
   $('#logout').onclick=async()=>{if(state.dirty&&!await ask('ออกจากระบบและยกเลิกข้อมูลที่ยังไม่บันทึก?'))return;API.logout();sessionUI();};window.addEventListener('session-ended',sessionUI);
   $('#refresh').onclick=()=>load();$('#add-case-button').onclick=()=>openCase();document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
   $('#period-month').value=today().slice(0,7);$('#period-form').onsubmit=e=>{e.preventDefault();render();};
