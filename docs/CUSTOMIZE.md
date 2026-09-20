@@ -20,4 +20,6 @@ KPI Monitoring, Data Import, Master Data และ Settings ไม่มีห�
 
 ## การตั้งค่าเป้าหมาย
 
-แก้เฉพาะ target/min_sample/enabled ใน `kpi_targets` ผ่าน PocketBase dashboard สำหรับผู้ดูแลระบบ ห้ามกรอก superuser credentials ใน public config.js เริ่มต้นเป้าหมายทั้งหมดปิดเพื่อไม่ตีความข้อมูลเป็นผ่าน/ไม่ผ่านด้วยเกณฑ์ที่ยังไม่รับรอง
+Admin เพิ่มและแก้เป้าหมายจากเมนูเป้าหมาย KPI ได้ โดยใช้สูตรเดิมหรือกำหนดตัวตั้ง/ตัวหาร/เงื่อนไขด้วยตัวสร้างสูตร ร้อยละและค่าเฉลี่ย Pain score รองรับใน `public/kpi-formula.js` โมดูลนี้ใช้ทั้ง browser, server validation และ tests หากเพิ่มฟิลด์หรือตัวเปรียบเทียบ ให้ปรับ whitelist/validation/calculation พร้อมกันและทดสอบข้อมูลขาดกับ privacy ห้ามใช้ eval หรือ SQL ที่ผู้ใช้กรอก
+
+ชื่อ/แหล่งข้อมูล/สูตร/ทิศทางแก้ไม่ได้หลังสร้าง ส่วน target/min_sample/enabled แก้ได้ ไม่มี target version ตามวันเริ่มใช้ เกณฑ์ล่าสุดใช้ทุกช่วงเวลา อ่านขั้นตอนและตัวอย่างสูตรใน README ห้ามกรอก superuser credentials ใน public config.js เริ่มต้นเป้าหมายทั้งหมดปิดเพื่อไม่ตีความข้อมูลด้วยเกณฑ์ที่ยังไม่รับรอง

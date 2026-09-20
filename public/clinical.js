@@ -1,5 +1,6 @@
 // Pure calculations: missing values never enter a denominator.
 (function(root) {
+  const formulaEngine=typeof module!=='undefined'?require('./kpi-formula.js'):root.KpiFormula;
   const definitions = [
     ["va_outcome", "VA 1 เดือน >6/12", "pass"], ["endophthalmitis", "Endophthalmitis", "yes"],
     ["wound_leak", "Wound leak", "yes"], ["reoperation", "Re-operation", "yes"],
@@ -11,12 +12,13 @@
     const metrics = [...definitions.map(([key, label, positive]) => ({key, label, source:key, positive})), ...custom.map(t => ({key:t.key, label:t.label, source:t.source, positive:definitions.find(d=>d[0]===t.source)?.[2]}))];
     return metrics.map(({key, label, source, positive}) => {
       const assessed = positive ? live.filter(c => [positive, positive === "pass" ? "fail" : "no"].includes(c[source])) : [];
-      const numerator = assessed.filter(c => c[source] === positive).length, denominator = assessed.length;
-      const value = denominator ? numerator / denominator * 100 : null;
       const target = targets.find(t => t.key === key);
+      const result=source==='custom'?formulaEngine.calculate(live,target?.formula):{numerator:assessed.filter(c=>c[source]===positive).length,denominator:assessed.length,unit:'%'};
+      const {numerator,denominator,unit}=result;
+      const value = source==='custom'?result.value:denominator?numerator/denominator*100:null;
       const enough = denominator >= (target?.min_sample || 1);
       const status = !denominator || !enough ? "insufficient" : !target?.enabled ? "unconfigured" : (target.direction === "gte" ? value >= target.target : value <= target.target) ? "pass" : "fail";
-      return { key, label, numerator, denominator, missing: live.length - denominator, value, target, status };
+      return { key, label, numerator, denominator, missing: live.length - denominator, value, unit, target, status, error:result.error };
     });
   }
   function period(cases, month, mode = "monthly") {

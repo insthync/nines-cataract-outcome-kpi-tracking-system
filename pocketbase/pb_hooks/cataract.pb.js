@@ -5,12 +5,15 @@ function stampCataract(e) {
   if (!e.hasSuperuserAuth()) {
     const permitted = e.record.collection().name === "cases"
       ? ["hn", "patient_name", "surgery_date", "surgeon", "diagnosis", "procedure", "eye", "anesthesia", "surgery_time", "preop_va", "implant", "lens_type", "guidance", "day1_date", "day1_va", "week1_date", "week1_va", "month1_date", "month1_va", "va_outcome", "endophthalmitis", "wound_leak", "reoperation", "biometry", "refractive", "pain_score", "notes", "revision", "archived"]
-      : e.record.collection().name === "quality_actions" ? ["month", "due_date", "title", "owner", "stage", "detail"] : e.record.isNew() ? ["label", "source", "target", "enabled", "min_sample"] : ["target", "enabled", "min_sample"];
+      : e.record.collection().name === "quality_actions" ? ["month", "due_date", "title", "owner", "stage", "detail"] : e.record.isNew() ? ["label", "source", "formula", "direction", "target", "enabled", "min_sample"] : ["target", "enabled", "min_sample"];
     if (Object.keys(body).some(k => !permitted.includes(k))) throw new BadRequestError("มีฟิลด์ที่ไม่อนุญาตให้แก้ไข");
   }
   if (e.record.collection().name === "kpi_targets" && e.record.isNew()) {
     e.record.set("key", "custom_" + $security.randomString(20));
-    e.record.set("direction", ["va_outcome", "biometry", "refractive"].includes(e.record.getString("source")) ? "gte" : "lte");
+    if (e.record.getString("source") !== "custom") {
+      if (Object.hasOwn(body,"direction") || Object.hasOwn(body,"formula")) throw new BadRequestError("สูตรสำเร็จรูปกำหนดทิศทางตามนิยามเดิม");
+      e.record.set("direction", ["va_outcome", "biometry", "refractive"].includes(e.record.getString("source")) ? "gte" : "lte");
+    }
   }
   if (e.record.collection().name === "cases") {
     if (!e.hasSuperuserAuth() && e.auth?.getString("role") !== "admin" && Object.hasOwn(body, "archived")) throw new ForbiddenError("เฉพาะผู้ดูแลที่ยกเลิกหรือคืนรายการได้");
@@ -33,6 +36,14 @@ onRecordValidate((e) => {
   const label = e.record.getString("label").trim();
   if (!label) throw new BadRequestError("กรุณาระบุชื่อ KPI");
   e.record.set("label", label);
+  if (e.record.getString("source") === "custom") {
+    const formulas=require(__hooks + "/../../public/kpi-formula.js");
+    let formula;
+    try { formula=JSON.parse(e.record.getString("formula")); } catch (_) { throw new BadRequestError("โครงสร้างสูตรไม่ถูกต้อง"); }
+    const error=formulas.validate(formula);
+    if (error) throw new BadRequestError(error);
+    if (formula.mode === "average" && e.record.getFloat("target") > 10) throw new BadRequestError("เป้าหมายค่าเฉลี่ย Pain score ต้องอยู่ระหว่าง 0–10");
+  }
   e.next();
 }, "kpi_targets");
 

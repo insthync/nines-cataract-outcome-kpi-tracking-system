@@ -1,6 +1,20 @@
 # Handoff
 
-Updated: 2026-09-19 (Asia/Bangkok)
+Updated: 2026-09-20 (Asia/Bangkok)
+
+## Admin KPI targets and custom formulas — 2026-09-20
+
+- Added Admin-only KPI Targets navigation and create/edit dialogs; the four previously excluded full pages remain excluded. Viewer label now reads ผู้ชม. Active viewers/editors can read targets but cannot create/update them at the API.
+- Admin can add a named KPI from six existing outcome definitions or choose กำหนดสูตรเอง. Custom formulas support a percentage with numerator/denominator filters, or mean Pain score. AND/OR groups allow up to 10 conditions each, using six outcome enums, eye, follow-up VA presence and Pain score comparisons. Empty groups mean all cases. Numerator is restricted to denominator membership; missing values never silently become zero. The preview uses the displayed saved surgery cohort.
+- Persisted formulas/names/sources/directions are immutable to app accounts. To change a definition, add another named KPI and disable the old target. Target value, min sample and enabled state remain editable; no hard delete. Current targets apply to all periods, with no effective-date versioning. CQI/target edits retain ordinary last-write semantics.
+- New migrations: `1789850000_custom_kpi_targets.js` adds source/backfill/admin create and unique labels; `1789851000_kpi_formulas.js` adds structured JSON formulas. Original schema migrations were not rewritten. Migrations refuse rollback if it would remove definitions/formulas still in use. No real pb_data was opened or migrated.
+- `public/kpi-formula.js` validates declarative formulas in browser, PocketBase hooks and Node tests. No eval/SQL/script expressions. Server generates keys and actor stamps, validates formula fields/operators/values and score target range, and atomically audits creation/updates. Audit UI shows latest 20 entries. KPI cards and aggregate reports now include percent/score units and custom results; existing VA annual trend remains VA-specific. CSV escapes formula-like label prefixes.
+- Verification: **189 assertions PASS** on OS temporary SQLite; includes migration backfill, admin-only create/update, duplicate labels, immutable definitions, formula persistence/audit, invalid/code-string rejection, AND/OR, numeric comparisons, denominator subsets, absent values versus zero, averages and N/A.
+- Browser: desktop (~1265px) and 390px mobile; added named/custom targets, changed source/conditions, previewed 1/3 = 33.33%, saved and reloaded, verified Dashboard pass/fail and report rows, created mean Pain score on mobile and edited target, inspected audit. No horizontal page overflow or browser warning/error logs. Earlier target checks also covered unsaved cancellation, disable/re-enable and viewer menu visibility.
+- JS syntax, PowerShell parsing, Bash syntax/LF and git diff --check checked. README, architecture/security and customization docs describe use and limits. Temporary test data contains only synthetic records; normal installation starts with no patient data.
+- Shared frontend cache version: `202609201347`. Temporary browser tab closed, viewport reset and preview listener confirmed stopped after testing.
+
+To use: restart PocketBase with `./scripts/start-pocketbase.ps1` to apply new migrations, refresh the browser, then Admin → เป้าหมาย KPI → เพิ่มเป้าหมาย KPI → กำหนดสูตรเอง. README includes a follow-up-completeness formula example.
 
 ## Mobile Hamburger and display title update — 2026-09-19
 
@@ -52,11 +66,11 @@ Preview is disposable, uses synthetic patients/accounts and prints its random cr
 
 ## Explicit limitations / next work
 
-- No excluded pages/import jobs/master-data CRUD/settings UI. KPI targets are configured by a trusted operator through PocketBase, disabled until approved. No clinically endorsed default percentages.
+- No excluded pages/import jobs/master-data CRUD/full settings UI. The separately authorized Admin KPI Targets page manages targets and structured formulas, disabled until approved. No clinically endorsed default percentages.
 - One-team shared data; public signup creates active viewers. Server masking is not anonymization or tenant isolation; users with viewer access still see clinical details. Review membership before real deployment.
 - VA/biometry/refractive pass/fail are clinician-entered assessments, not inferred from free text or diopters. OU is one encounter. Denominators are assessed encounters, not all procedures; this definition must be approved locally.
 - Quality alerts derive from saved cases, with no separate acknowledgement/event store or push scheduler. Due flags use 1/7/30 elapsed days. CQI is saved by exact review month and uses last-write update behavior.
-- Audit covers case/action create/update and target updates, not every login/view/export or member edit. App accounts cannot modify it; trusted superusers can. Full audit is available via authorized API; case UI shows latest 100.
+- Audit covers case/action/target create/update (except migration target seeds), not every login/view/export or member edit. App accounts cannot modify it; trusted superusers can. Full audit is available via authorized API; case UI shows latest 100 and target UI latest 20.
 - UI loads all authorized records for coherent pilot-scale calculations. Large datasets need server aggregation and paginated search. No offline saving or background autosave.
 - Backup/restore is operator-managed in PocketBase; reports are not backups. Browser print-to-PDF is provided, not a generated PDF template service.
 - No clinical certification, email recovery/verification UI, production deployment, multi-tenant implementation or scheduled backup. Linux/macOS startup was syntax-checked, not end-to-end executed on those OSes.

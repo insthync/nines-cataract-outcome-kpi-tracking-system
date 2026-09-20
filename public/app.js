@@ -8,6 +8,7 @@
   const path = name => `/api/collections/${name}/records`;
   const canWrite = () => ['editor','admin'].includes(API.user?.role);
   const targetState = {editing:null,dirty:false,saving:false};
+  let formulaDraft=null;
   const mobileLayout = window.matchMedia('(max-width: 760px)');
   const menuDialog = $('#mobile-menu');
   function closeMenu() { if (menuDialog.open) menuDialog.close(); $('#mobile-menu-toggle').setAttribute('aria-expanded', 'false'); }
@@ -99,7 +100,8 @@
     Clinical.kpis(cases,state.targets).forEach(k=>{
       const c=el('article',`kpi-card ${k.status}`);
       const status={pass:'● ผ่านเป้าหมาย',fail:'● ไม่ผ่านเป้าหมาย',insufficient:'○ ข้อมูลไม่เพียงพอ',unconfigured:'○ ยังไม่ตั้งเป้าหมาย'}[k.status];
-      c.append(el('p','kpi-label',k.label),el('span',`status ${k.status}`,status),el('strong','kpi-value',k.value===null?'N/A':k.value.toFixed(1)+'%'),el('p','muted',`${k.numerator} / ${k.denominator} รายที่ประเมิน · ยังไม่ประเมิน ${k.missing}`),el('p','target-note',k.target?.enabled?`เป้าหมาย ${k.target.direction==='gte'?'≥':'≤'} ${k.target.target}% · ขั้นต่ำ ${k.target.min_sample} ราย`:'เป้าหมายรอหน่วยงานรับรอง'));
+      c.append(el('p','kpi-label',k.label),el('span',`status ${k.status}`,status),el('strong','kpi-value',metricValue(k)),el('p','muted',`${k.unit==='คะแนน'?'ผลรวมคะแนน ':''}${k.numerator} / ${k.denominator} ราย · ไม่รวมตัวหาร ${k.missing}`),el('p','target-note',k.target?.enabled?`เป้าหมาย ${k.target.direction==='gte'?'≥':'≤'} ${k.target.target} ${k.unit} · ขั้นต่ำ ${k.target.min_sample} ราย`:'เป้าหมายรอหน่วยงานรับรอง'));
+      if(k.target?.source==='custom')c.append(el('p','muted',KpiFormula.describe(k.target.formula)));
       grid.append(c);
     });return grid;
   }
@@ -142,7 +144,7 @@
       root.append(summaries,metricCards(cases));const split=el('div','dashboard-grid');split.append(trend(state.cases),dataQuality(cases));root.append(split,alertPanel(cases));
     } else if(state.view==='quality'){root.append(alertPanel(cases,Infinity),dataQuality(cases));renderActions(root);}
     else if(state.view==='trend'){root.append(trend(state.cases));const year=Number($('#period-month').value.slice(0,4));const compare=panel('เทียบปีต่อปี');compare.append(table(['ปี','จำนวนผ่าตัด','VA ผ่าน / ประเมิน'],[year-1,year].map(y=>{const list=Clinical.period(state.cases,`${y}-12`,'year'),k=Clinical.kpis(list,state.targets)[0];return [y,list.length,k.value===null?'N/A':`${k.value.toFixed(1)}% (${k.numerator}/${k.denominator})`];})));root.append(compare);}
-    else {root.append(metricCards(cases));const p=panel(state.view==='reports'?'Monthly Cataract Outcome Report':'สรุปผลลัพธ์ในช่วงเวลาที่เลือก');p.append(table(['ตัวชี้วัด','ตัวตั้ง','ตัวหาร','ผลลัพธ์','ยังไม่ประเมิน'],Clinical.kpis(cases,state.targets).map(k=>[k.label,k.numerator,k.denominator,k.value===null?'N/A':k.value.toFixed(1)+'%',k.missing])));const assessed=cases.filter(c=>c.pain_score!=='');p.append(el('p','muted',`Pain score เฉลี่ย: ${assessed.length?(assessed.reduce((s,c)=>s+Number(c.pain_score),0)/assessed.length).toFixed(1):'N/A'} · ประเมิน ${assessed.length} ราย`));if(state.view==='reports'){p.append(button('ส่งออกสรุป CSV',()=>exportReport(cases)),button('พิมพ์ / บันทึก PDF',()=>window.print()));p.append(el('p','muted','รายงานส่งออกเป็นสถิติรวม ไม่รวม HN หรือชื่อผู้ป่วย • การสำรองฐานข้อมูลทำโดยผู้ดูแลระบบผ่าน PocketBase dashboard'));}root.append(p,dataQuality(cases));}
+    else {root.append(metricCards(cases));const p=panel(state.view==='reports'?'Monthly Cataract Outcome Report':'สรุปผลลัพธ์ในช่วงเวลาที่เลือก');p.append(table(['ตัวชี้วัด','ตัวตั้ง','ตัวหาร','ผลลัพธ์','ไม่รวมตัวหาร'],Clinical.kpis(cases,state.targets).map(k=>[k.label,k.numerator,k.denominator,metricValue(k),k.missing])));const assessed=cases.filter(c=>c.pain_score!=='');p.append(el('p','muted',`Pain score เฉลี่ย: ${assessed.length?(assessed.reduce((s,c)=>s+Number(c.pain_score),0)/assessed.length).toFixed(1):'N/A'} · ประเมิน ${assessed.length} ราย`));if(state.view==='reports'){p.append(button('ส่งออกสรุป CSV',()=>exportReport(cases)),button('พิมพ์ / บันทึก PDF',()=>window.print()));p.append(el('p','muted','รายงานส่งออกเป็นสถิติรวม ไม่รวม HN หรือชื่อผู้ป่วย • การสำรองฐานข้อมูลทำโดยผู้ดูแลระบบผ่าน PocketBase dashboard'));}root.append(p,dataQuality(cases));}
   }
   function renderRegistry(root){
     const p=panel(state.view==='followup'?'รายการติดตาม Day 1 · 1 สัปดาห์ · 1 เดือน':'รายการผู้ป่วยทั้งหมด');
@@ -176,17 +178,20 @@
   function renderTargets(root) {
     $('#page-description').textContent='กำหนดเกณฑ์ประเมินผลลัพธ์และจำนวนข้อมูลขั้นต่ำสำหรับทีม';
     const p=panel('เกณฑ์ประเมิน KPI');
-    p.append(button('＋ เพิ่มเป้าหมาย KPI',()=>openTarget()),el('p','muted','เพิ่มชื่อ KPI โดยเลือกข้อมูลผลลัพธ์ที่มีอยู่ 6 แบบ ระบบคำนวณจากรายการผ่าตัดเดิมตามสูตรที่แสดง ไม่เพิ่มแบบบันทึกผลลัพธ์ใหม่ ชื่อและสูตรจะเปลี่ยนไม่ได้หลังบันทึก'));
+    p.append(button('＋ เพิ่มเป้าหมาย KPI',()=>openTarget()),el('p','muted','เลือกสูตรสำเร็จรูปหรือสร้างสูตรร้อยละ/ค่าเฉลี่ยจากข้อมูลเคสที่บันทึก ชื่อและสูตรจะเปลี่ยนไม่ได้หลังบันทึก หากเปลี่ยนนิยามให้เพิ่มรายการใหม่และปิดประเมินรายการเดิม'));
     const grid=el('div','target-grid');
     state.targets.forEach(t=>{
       const card=el('article','target-card');
-      card.append(el('span',`badge ${t.enabled?'done':'off'}`,t.enabled?'เปิดประเมิน':'ปิดประเมิน'),el('h3','',t.label),el('p','muted',targetFormula(t.source||t.key)),el('strong','target-value',`${t.direction==='gte'?'≥':'≤'} ${t.target}%`),el('p','muted',`ข้อมูลขั้นต่ำ ${t.min_sample} รายที่ประเมิน`),el('p','record-meta',t.updated?`อัปเดต ${t.updated}`:'ยังไม่มีการแก้ไข'),button('แก้ไขเป้าหมาย',()=>openTarget(t)));
+      card.append(el('span',`badge ${t.enabled?'done':'off'}`,t.enabled?'เปิดประเมิน':'ปิดประเมิน'),el('h3','',t.label),el('p','muted',targetFormula(t.source||t.key,t.formula)),el('strong','target-value',`${t.direction==='gte'?'≥':'≤'} ${t.target} ${targetUnit(t)}`),el('p','muted',`ข้อมูลขั้นต่ำ ${t.min_sample} รายที่ประเมิน`),el('p','record-meta',t.updated?`อัปเดต ${t.updated}`:'ยังไม่มีการแก้ไข'),button('แก้ไขเป้าหมาย',()=>openTarget(t)));
       grid.append(card);
     });
     if (!state.targets.length) empty(p,'ไม่พบรายการเป้าหมาย KPI กรุณาตรวจสอบการติดตั้งฐานข้อมูล');
     p.append(grid);root.append(p);
   }
-  function targetFormula(source) {
+  function metricValue(k){return k.value===null?'N/A':`${k.value.toFixed(1)} ${k.unit}`;}
+  function targetUnit(t){return t.source==='custom'&&t.formula?.mode==='average'?'คะแนน':'%';}
+  function targetFormula(source,formula) {
+    if(source==='custom')return KpiFormula.describe(formula);
     const definition=Clinical.definitions.find(d=>d[0]===source);
     if (!definition) return 'ไม่พบข้อมูลผลลัพธ์ที่รองรับ';
     return `${definition[1]}: ${definition[2]==='pass'?'ผ่าน / (ผ่าน + ไม่ผ่าน) × 100 · ผ่านเกณฑ์เมื่อ ≥ เป้าหมาย':'พบ / (พบ + ไม่พบ) × 100 · ผ่านเกณฑ์เมื่อ ≤ เป้าหมาย'} · ไม่นับผลที่ยังไม่ประเมิน`;
@@ -195,20 +200,22 @@
     if (API.user?.role!=='admin') return;
     targetState.editing=target;targetState.dirty=false;
     const f=$('#target-form');f.reset();f.elements.target.value=target?.target??'';f.elements.min_sample.value=target?.min_sample??1;f.elements.enabled.checked=target?.enabled??false;
-    f.elements.source.replaceChildren(...Clinical.definitions.map(([key,label])=>{const option=el('option','',label);option.value=key;return option;}));
+    f.elements.source.replaceChildren(...[...Clinical.definitions,['custom','กำหนดสูตรเอง']].map(([key,label])=>{const option=el('option','',label);option.value=key;return option;}));
     f.elements.source.value=target?.source||target?.key||'va_outcome';
     $('#target-title').textContent=target?'แก้ไขเป้าหมาย KPI':'เพิ่มเป้าหมาย KPI';
     $('#target-definition').hidden=Boolean(target);$('#target-definition').disabled=Boolean(target);
     $('#target-label').textContent=target?.label||'กำหนดชื่อและเลือกสูตรก่อนบันทึก';
-    $('#target-direction').textContent=targetFormula(f.elements.source.value);
-    f.elements.source.onchange=()=>{$('#target-direction').textContent=targetFormula(f.elements.source.value);};
+    formulaDraft=target?.formula?JSON.parse(JSON.stringify(target.formula)):{mode:'ratio',numerator:{match:'all',conditions:[{field:'va_outcome',operator:'eq',value:'pass'}]},denominator:{match:'all',conditions:[{field:'va_outcome',operator:'is_set'}]}};
+    f.elements.formula_mode.value=formulaDraft.mode;f.elements.custom_direction.value=target?.direction||'gte';
+    renderFormulaBuilder();updateFormulaPreview();
+    f.elements.source.onchange=()=>{renderFormulaBuilder();updateFormulaPreview();};
     $('#target-error').textContent='';$('#target-save-state').textContent=target?`บันทึกล่าสุด ${target.updated || 'ยังไม่มี'}`:'ยังไม่ได้บันทึก · เป้าหมายใหม่เริ่มต้นปิดประเมิน';
     $('#target-history').replaceChildren();
     if (target) $('#target-history').append(button('ดูประวัติเป้าหมาย',async()=>{
       try {
         const data=await API.request(`${path('audit_logs')}?perPage=20&sort=-created&filter=${encodeURIComponent(`entity = "kpi_targets" && record_id = "${target.id}"`)}`);
         if (targetState.editing?.id!==target.id) return;
-        const names={target:'เป้าหมาย (%)',min_sample:'ข้อมูลขั้นต่ำ',enabled:'เปิดประเมิน'};
+        const names={target:'เป้าหมาย ('+targetUnit(target)+')',min_sample:'ข้อมูลขั้นต่ำ',enabled:'เปิดประเมิน'};
         $('#target-history').replaceChildren(...data.items.map(a=>{
           const display=v=>typeof v==='boolean'?(v?'เปิด':'ปิด'):v??'—';
           const changes=Object.entries(a.changes||{}).filter(([k])=>names[k]).map(([k,v])=>`${names[k]}: ${display(v.before)} → ${display(v.after)}`).join(' · ');
@@ -219,15 +226,58 @@
     }));
     $('#target-dialog').showModal();
   }
+  function renderFormulaBuilder(){
+    const f=$('#target-form'),custom=f.elements.source.value==='custom';
+    $('#formula-builder').hidden=!custom||Boolean(targetState.editing);$('#formula-builder').disabled=!custom||Boolean(targetState.editing);
+    const labels={denominator:'กลุ่มตัวหาร / กลุ่มที่หาค่าเฉลี่ย',numerator:'เงื่อนไขตัวตั้ง (ภายในกลุ่มตัวหาร)'};
+    for(const group of ['denominator','numerator']){
+      const root=$('#formula-'+group);root.replaceChildren();root.hidden=group==='numerator'&&formulaDraft.mode==='average';
+      if(root.hidden)continue;
+      const rule=formulaDraft[group];root.append(el('h3','',labels[group]));
+      const match=el('select');match.setAttribute('aria-label',`วิธีรวมเงื่อนไข${group==='numerator'?'ตัวตั้ง':'ตัวหาร'}`);
+      [['all','ต้องตรงครบทุกข้อ (AND)'],['any','ตรงข้อใดข้อหนึ่ง (OR)']].forEach(([value,label])=>{const o=el('option','',label);o.value=value;match.append(o);});match.value=rule.match;
+      match.onchange=()=>{rule.match=match.value;formulaChanged();};root.append(match);
+      if(!rule.conditions.length)root.append(el('p','muted','ไม่มีเงื่อนไข: ทุกเคส'));
+      rule.conditions.forEach((condition,index)=>{
+        const row=el('div','formula-condition'),prefix=`${group==='numerator'?'ตัวตั้ง':'ตัวหาร'} ข้อ ${index+1}`;
+        const field=el('select');field.setAttribute('aria-label',prefix+' ฟิลด์');
+        Object.entries(KpiFormula.fields).forEach(([key,definition])=>{const o=el('option','',definition.label);o.value=key;field.append(o);});field.value=condition.field;
+        const operator=el('select');operator.setAttribute('aria-label',prefix+' เงื่อนไข');
+        KpiFormula.allowed(condition.field).forEach(key=>{const o=el('option','',KpiFormula.operators[key]);o.value=key;operator.append(o);});operator.value=condition.operator;
+        const setDefault=()=>{delete condition.value;if(!['is_set','is_empty'].includes(condition.operator))condition.value=KpiFormula.fields[condition.field].numeric?0:KpiFormula.fields[condition.field].values[0];};
+        field.onchange=()=>{condition.field=field.value;condition.operator=KpiFormula.allowed(field.value)[0];setDefault();renderFormulaBuilder();formulaChanged();};
+        operator.onchange=()=>{condition.operator=operator.value;setDefault();renderFormulaBuilder();formulaChanged();};row.append(field,operator);
+        if(Object.hasOwn(condition,'value')){
+          const definition=KpiFormula.fields[condition.field],value=el(definition.numeric?'input':'select');value.setAttribute('aria-label',prefix+' ค่า');
+          if(definition.numeric){value.type='number';value.min='0';value.max='10';value.step='any';value.required=true;}
+          else definition.values.forEach(v=>{const o=el('option','',({pass:'ผ่าน',fail:'ไม่ผ่าน',yes:'พบ',no:'ไม่พบ'}[v]||v));o.value=v;value.append(o);});
+          value.value=condition.value;value.oninput=()=>{condition.value=definition.numeric?(value.value===''?null:Number(value.value)):value.value;formulaChanged();};row.append(value);
+        }
+        row.append(button('ลบเงื่อนไข',()=>{rule.conditions.splice(index,1);renderFormulaBuilder();formulaChanged();},'quiet'));root.append(row);
+      });
+      const add=button(`＋ เพิ่มเงื่อนไข${group==='numerator'?'ตัวตั้ง':'ตัวหาร'}`,()=>{rule.conditions.push({field:'va_outcome',operator:'is_set'});renderFormulaBuilder();formulaChanged();});add.disabled=rule.conditions.length>=10;root.append(add);
+    }
+  }
+  function currentFormula(){return formulaDraft.mode==='average'?{mode:'average',denominator:formulaDraft.denominator}:formulaDraft;}
+  function formulaChanged(){targetState.dirty=true;$('#target-save-state').textContent='มีการแก้ไขที่ยังไม่ได้บันทึก';updateFormulaPreview();}
+  function updateFormulaPreview(){
+    const f=$('#target-form'),custom=f.elements.source.value==='custom',formula=currentFormula();
+    $('#target-direction').textContent=targetFormula(f.elements.source.value,formula);
+    $('#formula-preview').hidden=!custom;
+    const average=custom&&formula.mode==='average';f.elements.target.max=average?'10':'100';
+    $('#target-unit').textContent=average?'เป้าหมาย (คะแนน 0–10)':'เป้าหมาย (%)';
+    if(custom){const result=KpiFormula.calculate(selected(),formula);$('#formula-preview').textContent=result.error||`ตัวอย่างจากข้อมูลที่บันทึก · ${$('#period-month').value} · ${$('#period-mode').selectedOptions[0].textContent}: ${result.numerator} ÷ ${result.denominator}${average?'':' × 100'} = ${result.value===null?'N/A':result.value.toFixed(2)+' '+result.unit} · ไม่รวมตัวหาร ${result.missing} ราย${targetState.editing?'':' (ยังไม่บันทึกสูตรใหม่)'}`;}
+  }
   function renderActions(root){const p=panel('Monthly Quality Review · CQI / PDCA');if(canWrite())p.append(button('＋ เพิ่มแผนปรับปรุง',()=>openAction()));const actions=state.actions.filter(a=>a.month===$('#period-month').value);if(!actions.length)empty(p,'ยังไม่มีแผนทบทวนในเดือนอ้างอิง');actions.forEach(a=>{const row=el('article','record');const info=el('div');info.append(el('h3','record-title',a.title),el('p','muted',`${a.owner} · ครบกำหนด ${a.due_date}`));row.append(info,el('span','badge',a.stage.toUpperCase()),button('เปิดแผน',()=>openAction(a)));p.append(row);});root.append(p);}
   function openAction(record=null){state.action=record;const f=$('#action-form');f.reset();['month','due_date','title','owner','stage','detail'].forEach(k=>{f.elements[k].value=record?.[k]??({month:$('#period-month').value,stage:'plan'}[k]||'');});$('#action-fields').disabled=!canWrite();$('#save-action').hidden=!canWrite();$('#action-error').textContent='';$('#action-dialog').showModal();}
-  function exportReport(cases){const rows=[['Cataract Outcome Report'],['ช่วงเวลา',$('#period-month').value,$('#period-mode').value],['วันที่สร้าง',today()],['KPI','Numerator','Denominator','Percent','Missing'],...Clinical.kpis(cases,state.targets).map(k=>[k.label,k.numerator,k.denominator,k.value===null?'N/A':k.value.toFixed(2),k.missing])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/^([\s]*[=+@-])/,"'"+'$1').replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=el('a');a.href=url;a.download=`cataract-outcome-${$('#period-month').value}-${$('#period-mode').value}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('ส่งออกสถิติจากข้อมูลที่บันทึกแล้ว');}
+  function exportReport(cases){const rows=[['Cataract Outcome Report'],['ช่วงเวลา',$('#period-month').value,$('#period-mode').value],['วันที่สร้าง',today()],['KPI','Numerator','Denominator','Result','Unit','Excluded'],...Clinical.kpis(cases,state.targets).map(k=>[k.label,k.numerator,k.denominator,k.value===null?'N/A':k.value.toFixed(2),k.unit,k.missing])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/^([\s]*[=+@-])/,"'"+'$1').replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=el('a');a.href=url;a.download=`cataract-outcome-${$('#period-month').value}-${$('#period-mode').value}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('ส่งออกสถิติจากข้อมูลที่บันทึกแล้ว');}
   async function submit(event,errorSelector,task){event.preventDefault();const b=event.currentTarget.querySelector('button[type=submit]');if(b.disabled)return;b.disabled=true;$(errorSelector).textContent='';try{await task();}catch(e){$(errorSelector).textContent=e.message;}finally{b.disabled=false;}}
   $('#login-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#login-error',async()=>{await API.login(f.elements.identity.value.trim(),f.elements.password.value);f.reset();state.view='dashboard';await load();});};
   $('#case-form').oninput=()=>{state.dirty=true;$('#save-state').textContent='มีการแก้ไขที่ยังไม่ได้บันทึก (Unsaved changes)';};
   $('#case-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#case-error',async()=>{state.saving=true;$('#save-state').textContent='กำลังบันทึก…';try{const body={};fieldNames.forEach(k=>{body[k]=f.elements[k].value.trim();});if(state.editing)body.revision=state.editing.revision;await API.request(path('cases')+(state.editing?'/'+state.editing.id:''),{method:state.editing?'PATCH':'POST',body});state.dirty=false;$('#case-dialog').close();await load();notice('บันทึกสำเร็จ • Dashboard และ KPI อัปเดตแล้ว');}catch(err){$('#save-state').textContent='ยังไม่บันทึก — ตรวจข้อผิดพลาดและลองใหม่';throw err;}finally{state.saving=false;}});};
   $('#user-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#user-error',async()=>{await API.request(path('users')+'/'+state.user.id,{method:'PATCH',body:{name:f.elements.name.value.trim(),role:f.elements.role.value,active:f.elements.active.checked}});$('#user-dialog').close();await load();notice('บันทึกสมาชิกแล้ว');});};
   $('#target-form').oninput=()=>{targetState.dirty=true;$('#target-save-state').textContent='มีการแก้ไขที่ยังไม่ได้บันทึก';};
+  $('#target-form').elements.formula_mode.onchange=()=>{formulaDraft.mode=$('#target-form').elements.formula_mode.value;if(formulaDraft.mode==='ratio'&&!formulaDraft.numerator)formulaDraft.numerator={match:'all',conditions:[]};renderFormulaBuilder();formulaChanged();};
   $('#target-form').onsubmit=e=>{
     const f=e.currentTarget;
     submit(e,'#target-error',async()=>{
@@ -236,7 +286,7 @@
       targetState.saving=true;$('#target-save-state').textContent='กำลังบันทึก…';
       try {
         const body={target,min_sample,enabled:f.elements.enabled.checked};
-        if (!targetState.editing) {body.label=f.elements.label.value.trim();body.source=f.elements.source.value;if(!body.label)throw new Error('กรุณาระบุชื่อ KPI');}
+        if (!targetState.editing) {body.label=f.elements.label.value.trim();body.source=f.elements.source.value;if(!body.label)throw new Error('กรุณาระบุชื่อ KPI');if(body.source==='custom'){body.formula=currentFormula();body.direction=f.elements.custom_direction.value;const error=KpiFormula.validate(body.formula);if(error)throw new Error(error);}}
         await API.request(path('kpi_targets')+(targetState.editing?'/'+targetState.editing.id:''),{method:targetState.editing?'PATCH':'POST',body});
         targetState.dirty=false;$('#target-dialog').close();await load();notice('บันทึกเป้าหมาย KPI แล้ว • เกณฑ์ใหม่ใช้กับ Dashboard และรายงาน');
       } catch(error) {$('#target-save-state').textContent='ยังไม่บันทึก กรุณาตรวจสอบและลองใหม่';throw error;}
