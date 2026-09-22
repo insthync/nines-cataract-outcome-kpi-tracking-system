@@ -36,7 +36,7 @@ bash scripts/start-pocketbase.sh
 
 ## หน้าที่ทำแล้ว
 
-- **Dashboard**: จำนวนผ่าตัด, KPI 6 ตัวพร้อมตัวตั้ง/ตัวหาร/ข้อมูลขาด, สถานะเป้าหมาย, แนวโน้มรายเดือน, Data Quality และ Quality Alerts
+- **Dashboard**: จำนวนผ่าตัด, KPI หลัก 5 ตัวพร้อมตัวตั้ง/ตัวหาร/ข้อมูลขาด และ KPI ที่ Admin เพิ่มเอง, สถานะเป้าหมาย, แนวโน้มรายเดือน, Data Quality และ Quality Alerts
 - **Case Registry / Add New Case**: ค้นหา แบ่งหน้า ดู/เพิ่ม/แก้ไข ข้อมูลผ่าตัด เลนส์ และผลลัพธ์ตามฟอร์มอ้างอิง พร้อม Created/Updated By, เวลาบันทึก, Unsaved changes และการป้องกันบันทึกซ้ำ
 - **Follow-up**: VA และวันที่ Day 1, 1 สัปดาห์, 1 เดือน กรองรายการติดตามครบ/ยังไม่ครบ
 - **Monthly Statistics / Trend Analysis**: รายเดือน รายไตรมาส YTD ทั้งปี และเทียบปีต่อปี จัด cohort ตามวันที่ผ่าตัด
@@ -60,6 +60,12 @@ bash scripts/start-pocketbase.sh
 กฎบังคับที่ PocketBase API ไม่ได้อาศัยการซ่อนปุ่มอย่างเดียว เคสใช้การยกเลิกแบบคืนรายการได้แทนการลบถาวร เคสที่ยกเลิกไม่รวม KPI ข้อมูลเป็นทีมเดียว ไม่มี tenant หรือการแยกตามเจ้าของ
 
 ## นิยาม KPI และเป้าหมาย
+
+Refractive ถูกนำออกจาก KPI หลักใน Dashboard สถิติ รายงาน และรายการเป้าหมายหลัก โดยยังเก็บผลการประเมินเดิมและรองรับสูตร Custom ที่อ้างอิงข้อมูลนี้อยู่ ไม่มีการลบข้อมูลย้อนหลัง
+
+หน้าทะเบียนผ่าตัดแสดง Implant (Lens) / Power และ Type Lens แทน Case ID ในรายการ ฟอร์มผ่าตัดกรอกชั่วโมง 0–23 และนาที 0–59 แยกช่อง โดยต้องกรอกทั้งคู่หรือเว้นว่างทั้งคู่ บันทึกเป็น HH:mm ตามเดิม
+
+Type Lens เลือกได้ 8 แบบ: Monofocal IOL, Monofocal Toric IOL, Enhanced Monofocal IOL, Enhanced Monofocal Toric IOL, EDOF IOL, EDOF Toric IOL, Multifocal/Trifocal IOL และ Multifocal/Trifocal Toric IOL เซิร์ฟเวอร์ตรวจตัวเลือกด้วย ข้อมูลเก่าที่อยู่นอกรายการแสดงเป็น “ข้อมูลเดิม” และเก็บค่าเดิมได้ เมื่อเปลี่ยนต้องเลือกค่าที่รองรับหรือไม่ระบุ
 
 - VA, Biometry และ Refractive: จำนวนผล `pass` / จำนวนที่ประเมิน `pass` หรือ `fail`
 - Endophthalmitis, Wound leak, Re-operation: จำนวน `yes` / จำนวนที่ประเมิน `yes` หรือ `no`

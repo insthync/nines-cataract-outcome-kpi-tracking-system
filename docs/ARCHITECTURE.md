@@ -25,6 +25,10 @@ Viewer responses mask HN to its last two characters, replace patient name, and o
 
 ## Frontend and calculations
 
+Built-in KPI output now contains five metrics: the historical `refractive` target is excluded from default results and target-management cards, without deleting source data or the original metadata row. Explicit custom definitions can still use the refractive outcome. `Clinical.sourceDefinitions` retains all six calculation sources; `Clinical.definitions` contains the five active built-ins. Registry/follow-up list summaries show implant/power and lens type in place of Case ID.
+
+The surgery-time UI uses separate numeric hour/minute inputs, validates paired entry and serializes HH:mm to the existing text field. Lens type remains a text field to preserve legacy values; the UI and server share the eight allowed options from `clinical.js`. New or changed nonempty values must match this list. An unchanged historical non-list value is permitted and shown as a legacy option on that record only. No schema change or migration is needed.
+
 `api.js` stores only app sessions in sessionStorage scoped to origin. Refresh on load rechecks current role. A 401 clears the session; other failures retain it with an error. Each complete refresh loads all pages of authorized cases, targets and CQI (500 per request), then renders; failed pages never produce partial KPI results. Generation checks discard stale loads after logout/new reload. This is appropriate for pilot datasets; larger deployments should move aggregation/search to paginated server queries.
 
 `clinical.js` is shared by browser and Node tests. No demo fallback data. Exclude archived cases; cohort by surgery date. VA/biometry/refractive numerator = pass, denominator = pass+fail. Complication numerator = yes, denominator = yes+no. Missing assessments are excluded and reported separately. OU remains one encounter. Results are entered assessments rather than calculated from free-text acuity/diopters. Min sample gates target status, not raw descriptive percentages. Disabled targets show unconfigured, zero denominator shows N/A.

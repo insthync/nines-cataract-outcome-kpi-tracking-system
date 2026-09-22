@@ -70,6 +70,8 @@ onRecordValidate((e) => {
     if (pain && (!/^(10|[0-9])(\.0)?$/.test(pain))) throw new BadRequestError("Pain score ต้องเป็นจำนวนเต็ม 0–10");
     const time = r.getString("surgery_time");
     if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new BadRequestError("เวลาไม่ถูกต้อง");
+    const lens=r.getString("lens_type"), lensTypes=require(__hooks + "/../../public/clinical.js").lensTypes;
+    if(lens && !lensTypes.includes(lens) && (r.isNew() || lens!==r.original().getString("lens_type"))) throw new BadRequestError("กรุณาเลือก Type Lens จากรายการที่กำหนด");
   } else if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(r.getString("month")) || !validDate(r.getString("due_date"))) throw new BadRequestError("เดือนหรือวันครบกำหนดไม่ถูกต้อง");
   e.next();
 }, "cases", "quality_actions");

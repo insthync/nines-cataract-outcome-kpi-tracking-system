@@ -1,5 +1,7 @@
 # Security boundaries
 
+- Lens types are checked in the model validation hook against the eight supported options. An existing non-list value can remain unchanged, but new/changed nonempty values must be in the list. Surgery time remains optional strict HH:mm (00:00–23:59); UI hour/minute controls do not replace server validation.
+
 - Only active app Admins create KPI targets. The server validates custom formulas against the same strict field/operator schema used by calculations, rejects unknown fields and code strings, restricts each condition group to 10 entries and caps formula JSON at 12 KB. KPI formula filters exclude patient identifiers and free-text clinical notes. Keys and actor stamps are server-owned; saved names/sources/formulas/directions cannot be modified by app accounts. Formula creation and audit commit together. The default six definitions remain disabled until approved.
 
 - Browser accounts authenticate to `users`, never `_superusers`. No committed credentials, binary, runtime database, backup or export. Session tokens live in sessionStorage and clear on logout/401.

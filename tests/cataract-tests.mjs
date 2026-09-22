@@ -166,4 +166,13 @@ export async function runCataract({request,check,accounts,su,password,base}) {
   check(Clinical.alerts([{id:'x',surgery_date:'2026-01-01'}],'2026-01-01').length===0,'no premature overdue alert');
   for(const url of ['/','/register.html','/app.js','/api.js','/clinical.js','/styles.css'])check((await fetch(base+url)).status===200,`public asset ${url}`);
   for(const url of ['/pocketbase/pb_data/data.db','/pocketbase/pocketbase.exe','/scripts/setup-pocketbase.ps1','/.git/config'])check((await fetch(base+url)).status===404,`private path blocked ${url}`);
+  check(Clinical.kpis(synthetic,defs.data.items).length===5&&!Clinical.kpis(synthetic,defs.data.items).some(k=>k.key==='refractive'),'retired built-in refractive does not reappear as a custom KPI');
+  check(Clinical.kpis(synthetic,[{key:'custom_legacy_refractive',source:'refractive',label:'Existing custom',enabled:false,min_sample:1}]).some(k=>k.key==='custom_legacy_refractive'&&k.value!==null),'existing explicitly configured custom source keeps its calculation');
+  for(const [index,lens_type] of Clinical.lensTypes.entries()){
+    const lensCase=await request(cases,'POST',{...sample,hn:`LENS-${index}`,lens_type,implant:'Test IOL / +21.0D',surgery_time:index===0?'00:00':'23:59'},editor);
+    check(lensCase.status===200&&lensCase.data.lens_type===lens_type&&lensCase.data.implant==='Test IOL / +21.0D','approved lens option and implant persist');
+    check((await request(`${cases}/${lensCase.data.id}`,'PATCH',{revision:lensCase.data.revision,lens_type:'Unknown lens'},editor)).status===400,'invalid changed lens rejected');
+  }
+  for(const value of ['Unknown lens','monofocal iol','   '])check((await request(cases,'POST',{...sample,hn:'BAD-LENS',lens_type:value},editor)).status===400,'new case rejects unsupported lens type');
+  for(const value of ['24:00','12:60','12','12:','-1:30','12:30:00'])check((await request(cases,'POST',{...sample,hn:'BAD-TIME',surgery_time:value},editor)).status===400,'invalid surgery time rejected');
 }

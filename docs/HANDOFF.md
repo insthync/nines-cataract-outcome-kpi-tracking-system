@@ -1,6 +1,14 @@
 # Handoff
 
-Updated: 2026-09-20 (Asia/Bangkok)
+Updated: 2026-09-22 (Asia/Bangkok)
+
+## KPI and lens form changes — 2026-09-22
+
+- Removed the built-in Refractive KPI from Dashboard/statistics/reports and target cards. Historical assessment data and explicitly configured custom formulas remain supported; no destructive data change or migration.
+- Registry/follow-up cards display Implant (Lens) / Power and Type Lens instead of Case ID. Implant label updated in section 2; Type Lens is a dropdown with all eight requested IOL options.
+- Section 1 uses separate hour/minute numeric inputs and preserves HH:mm storage, including zero-padded 09:05. Partial time entry is rejected. Existing free-text lens values remain selectable for their original record; model validation rejects new unsupported lens values.
+- Temporary database suite: **216 assertions PASS**. Includes all eight lens choices, unsupported lens changes, invalid time boundaries and retired KPI regression. No real pb_data accessed.
+- Browser checks on desktop and 390px mobile: no default Refractive card, section labels/options, partial-time validation, create/save/reload with 09:05 and lens data, registry without Case ID, mobile lens update. No page overflow or browser warning/error logs. JavaScript/PowerShell/Bash syntax and git diff whitespace checks completed.
 
 ## Admin KPI targets and custom formulas — 2026-09-20
 

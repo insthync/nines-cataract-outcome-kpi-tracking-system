@@ -1,15 +1,17 @@
 // Pure calculations: missing values never enter a denominator.
 (function(root) {
   const formulaEngine=typeof module!=='undefined'?require('./kpi-formula.js'):root.KpiFormula;
-  const definitions = [
+  const sourceDefinitions = [
     ["va_outcome", "VA 1 เดือน >6/12", "pass"], ["endophthalmitis", "Endophthalmitis", "yes"],
     ["wound_leak", "Wound leak", "yes"], ["reoperation", "Re-operation", "yes"],
     ["biometry", "Biometry ±0.50D", "pass"], ["refractive", "Refractive ±1.0D", "pass"]
   ];
+  const definitions=sourceDefinitions.filter(([key])=>key!=='refractive');
+  const lensTypes=['Monofocal IOL','Monofocal Toric IOL','Enhanced Monofocal IOL','Enhanced Monofocal Toric IOL','EDOF IOL','EDOF Toric IOL','Multifocal/Trifocal IOL','Multifocal/Trifocal Toric IOL'];
   function kpis(cases, targets = []) {
     const live = cases.filter(c => !c.archived);
-    const custom = targets.filter(t => !definitions.some(d => d[0] === t.key));
-    const metrics = [...definitions.map(([key, label, positive]) => ({key, label, source:key, positive})), ...custom.map(t => ({key:t.key, label:t.label, source:t.source, positive:definitions.find(d=>d[0]===t.source)?.[2]}))];
+    const custom = targets.filter(t => !sourceDefinitions.some(d => d[0] === t.key));
+    const metrics = [...definitions.map(([key, label, positive]) => ({key, label, source:key, positive})), ...custom.map(t => ({key:t.key, label:t.label, source:t.source, positive:sourceDefinitions.find(d=>d[0]===t.source)?.[2]}))];
     return metrics.map(({key, label, source, positive}) => {
       const assessed = positive ? live.filter(c => [positive, positive === "pass" ? "fail" : "no"].includes(c[source])) : [];
       const target = targets.find(t => t.key === key);
@@ -45,7 +47,7 @@
     });
     return result.sort((a,b) => ["critical","high","monitor"].indexOf(a.level) - ["critical","high","monitor"].indexOf(b.level));
   }
-  const api = { definitions, kpis, period, alerts };
+  const api = { definitions, sourceDefinitions, lensTypes, kpis, period, alerts };
   if (typeof module !== "undefined") module.exports = api;
   else root.Clinical = api;
 })(typeof window === "undefined" ? globalThis : window);
