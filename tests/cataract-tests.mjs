@@ -16,6 +16,10 @@ export async function runCataract({request,check,accounts,su,password,base}) {
   check(created.status===200,`editor create case: ${JSON.stringify(created)}`);
   const id=created.data.id;
   check(created.data.created_by===accounts.editor.record.id && created.data.revision===1,'server stamps actor and revision');
+  check(!Object.hasOwn(created.data,'surgery_time'),'case response no longer contains surgery time');
+  const caseSchema=await request('/api/collections/cases','GET',undefined,su);
+  check(caseSchema.status===200&&!caseSchema.data.fields.some(f=>f.name==='surgery_time'),'migration removes surgery time schema field');
+  check((await request(`${cases}/${id}`,'PATCH',{revision:1,surgery_time:'09:05'},editor)).status===400,'retired surgery time field rejected on update');
   check((await request(`${cases}/${id}`)).status===404,'guest detail blocked');
   for(const [role,token] of [['viewer',viewer],['editor',editor],['admin',admin]]){
     const result=await request(`${cases}/${id}`,'GET',undefined,token);check(result.status===200,`${role} reads case`);
@@ -169,10 +173,9 @@ export async function runCataract({request,check,accounts,su,password,base}) {
   check(Clinical.kpis(synthetic,defs.data.items).length===5&&!Clinical.kpis(synthetic,defs.data.items).some(k=>k.key==='refractive'),'retired built-in refractive does not reappear as a custom KPI');
   check(Clinical.kpis(synthetic,[{key:'custom_legacy_refractive',source:'refractive',label:'Existing custom',enabled:false,min_sample:1}]).some(k=>k.key==='custom_legacy_refractive'&&k.value!==null),'existing explicitly configured custom source keeps its calculation');
   for(const [index,lens_type] of Clinical.lensTypes.entries()){
-    const lensCase=await request(cases,'POST',{...sample,hn:`LENS-${index}`,lens_type,implant:'Test IOL / +21.0D',surgery_time:index===0?'00:00':'23:59'},editor);
+    const lensCase=await request(cases,'POST',{...sample,hn:`LENS-${index}`,lens_type,implant:'Test IOL / +21.0D'},editor);
     check(lensCase.status===200&&lensCase.data.lens_type===lens_type&&lensCase.data.implant==='Test IOL / +21.0D','approved lens option and implant persist');
     check((await request(`${cases}/${lensCase.data.id}`,'PATCH',{revision:lensCase.data.revision,lens_type:'Unknown lens'},editor)).status===400,'invalid changed lens rejected');
   }
   for(const value of ['Unknown lens','monofocal iol','   '])check((await request(cases,'POST',{...sample,hn:'BAD-LENS',lens_type:value},editor)).status===400,'new case rejects unsupported lens type');
-  for(const value of ['24:00','12:60','12','12:','-1:30','12:30:00'])check((await request(cases,'POST',{...sample,hn:'BAD-TIME',surgery_time:value},editor)).status===400,'invalid surgery time rejected');
 }

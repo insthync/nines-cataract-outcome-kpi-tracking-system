@@ -1,6 +1,15 @@
 # Handoff
 
-Updated: 2026-09-22 (Asia/Bangkok)
+Updated: 2026-09-23 (Asia/Bangkok)
+
+## Remove surgery time — 2026-09-23
+
+- Removed hour/minute inputs, hidden time field, serialization and unused styles from create/edit forms.
+- User requested database removal too. New migration `1790120000_remove_surgery_time.js` drops `cases.surgery_time`; its previous values are discarded. Rollback only recreates an empty optional text field. Earlier migrations remain unchanged; no real database was opened or migrated during development.
+- Removed the field from the server request whitelist and removed time validation. Old clients submitting surgery_time must refresh; those requests are rejected. Other case data and permissions remain unchanged.
+- `node tests/integration.mjs`: **213 assertions PASS**, including schema absence, response absence and retired-field rejection. `node tests/remove-time-migration.mjs`: populated temporary SQLite upgrade confirms physical column removal, preserved case/lens values and repeat migration safety.
+- Browser verified Desktop and 390px mobile: no time controls, successful synthetic case save, no horizontal overflow or warning/error logs. JS syntax, PowerShell parsing, Bash syntax/LF and git diff --check passed.
+- Restart PocketBase with the normal start script to apply the migration, then refresh the browser. No manual database deletion is required.
 
 ## KPI and lens form changes — 2026-09-22
 

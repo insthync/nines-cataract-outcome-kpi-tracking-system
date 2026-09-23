@@ -4,7 +4,7 @@ function stampCataract(e) {
   if (!e.hasSuperuserAuth() && ["created_by", "updated_by", "created", "updated"].some(k => Object.hasOwn(body, k))) throw new BadRequestError("ประวัติผู้บันทึกกำหนดโดยเซิร์ฟเวอร์");
   if (!e.hasSuperuserAuth()) {
     const permitted = e.record.collection().name === "cases"
-      ? ["hn", "patient_name", "surgery_date", "surgeon", "diagnosis", "procedure", "eye", "anesthesia", "surgery_time", "preop_va", "implant", "lens_type", "guidance", "day1_date", "day1_va", "week1_date", "week1_va", "month1_date", "month1_va", "va_outcome", "endophthalmitis", "wound_leak", "reoperation", "biometry", "refractive", "pain_score", "notes", "revision", "archived"]
+      ? ["hn", "patient_name", "surgery_date", "surgeon", "diagnosis", "procedure", "eye", "anesthesia", "preop_va", "implant", "lens_type", "guidance", "day1_date", "day1_va", "week1_date", "week1_va", "month1_date", "month1_va", "va_outcome", "endophthalmitis", "wound_leak", "reoperation", "biometry", "refractive", "pain_score", "notes", "revision", "archived"]
       : e.record.collection().name === "quality_actions" ? ["month", "due_date", "title", "owner", "stage", "detail"] : e.record.isNew() ? ["label", "source", "formula", "direction", "target", "enabled", "min_sample"] : ["target", "enabled", "min_sample"];
     if (Object.keys(body).some(k => !permitted.includes(k))) throw new BadRequestError("มีฟิลด์ที่ไม่อนุญาตให้แก้ไข");
   }
@@ -68,8 +68,6 @@ onRecordValidate((e) => {
     if (r.getString("va_outcome") && !m1) throw new BadRequestError("ผล VA 1 เดือนต้องมีวันที่และค่า VA");
     const pain = r.getString("pain_score");
     if (pain && (!/^(10|[0-9])(\.0)?$/.test(pain))) throw new BadRequestError("Pain score ต้องเป็นจำนวนเต็ม 0–10");
-    const time = r.getString("surgery_time");
-    if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new BadRequestError("เวลาไม่ถูกต้อง");
     const lens=r.getString("lens_type"), lensTypes=require(__hooks + "/../../public/clinical.js").lensTypes;
     if(lens && !lensTypes.includes(lens) && (r.isNew() || lens!==r.original().getString("lens_type"))) throw new BadRequestError("กรุณาเลือก Type Lens จากรายการที่กำหนด");
   } else if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(r.getString("month")) || !validDate(r.getString("due_date"))) throw new BadRequestError("เดือนหรือวันครบกำหนดไม่ถูกต้อง");

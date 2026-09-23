@@ -63,7 +63,7 @@ bash scripts/start-pocketbase.sh
 
 Refractive ถูกนำออกจาก KPI หลักใน Dashboard สถิติ รายงาน และรายการเป้าหมายหลัก โดยยังเก็บผลการประเมินเดิมและรองรับสูตร Custom ที่อ้างอิงข้อมูลนี้อยู่ ไม่มีการลบข้อมูลย้อนหลัง
 
-หน้าทะเบียนผ่าตัดแสดง Implant (Lens) / Power และ Type Lens แทน Case ID ในรายการ ฟอร์มผ่าตัดกรอกชั่วโมง 0–23 และนาที 0–59 แยกช่อง โดยต้องกรอกทั้งคู่หรือเว้นว่างทั้งคู่ บันทึกเป็น HH:mm ตามเดิม
+หน้าทะเบียนผ่าตัดแสดง Implant (Lens) / Power และ Type Lens แทน Case ID ในรายการ นำเวลาผ่าตัดออกจากฟอร์มและฐานข้อมูลแล้วด้วย migration `1790120000_remove_surgery_time.js` โดยข้อมูลเวลาเดิมจะถูกลบ เมื่อเริ่ม PocketBase ใหม่ migration จะทำงานอัตโนมัติ
 
 Type Lens เลือกได้ 8 แบบ: Monofocal IOL, Monofocal Toric IOL, Enhanced Monofocal IOL, Enhanced Monofocal Toric IOL, EDOF IOL, EDOF Toric IOL, Multifocal/Trifocal IOL และ Multifocal/Trifocal Toric IOL เซิร์ฟเวอร์ตรวจตัวเลือกด้วย ข้อมูลเก่าที่อยู่นอกรายการแสดงเป็น “ข้อมูลเดิม” และเก็บค่าเดิมได้ เมื่อเปลี่ยนต้องเลือกค่าที่รองรับหรือไม่ระบุ
 

@@ -38,7 +38,7 @@
   const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const groups = [
     ['01','ข้อมูลผู้ป่วยและการผ่าตัด',[
-      ['surgery_date','วันที่ผ่าตัด','date',true],['surgeon','แพทย์ผู้ผ่าตัด','text',true],['hn','HN','text',true,30],['patient_name','ชื่อ-สกุล','text',true,200],['diagnosis','Diagnosis / การวินิจฉัย','text',false,200],['procedure','หัตถการ','text',true],['eye','ข้าง','select',true,['OD','OS','OU']],['anesthesia','Anesthesia / การระงับความรู้สึก','text'],['surgery_time','เวลาผ่าตัด','time'],['preop_va','VA ก่อนผ่าตัด','text',false,30]
+      ['surgery_date','วันที่ผ่าตัด','date',true],['surgeon','แพทย์ผู้ผ่าตัด','text',true],['hn','HN','text',true,30],['patient_name','ชื่อ-สกุล','text',true,200],['diagnosis','Diagnosis / การวินิจฉัย','text',false,200],['procedure','หัตถการ','text',true],['eye','ข้าง','select',true,['OD','OS','OU']],['anesthesia','Anesthesia / การระงับความรู้สึก','text'],['preop_va','VA ก่อนผ่าตัด','text',false,30]
     ]],
     ['02','เลนส์และอุปกรณ์', [['implant','Implant (Lens) / Power','text'],['lens_type','Type Lens','select',false,Clinical.lensTypes],['guidance','Callisto / Verion','select',false,['Callisto','Verion','None']]]],
     ['03','ติดตามผลการมองเห็น', [
@@ -56,11 +56,6 @@
       const section = el('section','form-section'); section.append(el('h3','',`${num}  ${title}`));
       const grid = el('div','form-grid');
       fields.forEach(([name,label,type,required,limit]) => {
-        if(name==='surgery_time'){
-          const group=el('fieldset','surgery-time');group.append(el('legend','',label));const row=el('div','time-parts');
-          [['surgery_hour','ชั่วโมง',23],['surgery_minute','นาที',59]].forEach(([part,text,max])=>{const l=el('label','',text);const input=el('input');input.name=part;input.type='number';input.min=0;input.max=max;input.step=1;input.inputMode='numeric';input.placeholder='00';input.setAttribute('aria-label',text+'ผ่าตัด');l.append(input);row.append(l);});
-          const hidden=el('input');hidden.type='hidden';hidden.name=name;group.append(row,hidden,el('small','muted','เวลา 24 ชั่วโมง · กรอกชั่วโมงและนาทีคู่กัน หรือเว้นว่างทั้งสองช่อง'));grid.append(group);return;
-        }
         const l = el('label',type === 'textarea' ? 'full-width' : '',label + (required ? ' *' : ''));
         const input = el(type === 'select' ? 'select' : type === 'textarea' ? 'textarea' : 'input'); input.name = name; input.required = Boolean(required);
         if (type === 'select') { const empty = el('option','','ยังไม่ประเมิน / ไม่ระบุ'); empty.value = ''; input.append(empty); limit.forEach(v => { const o = el('option','',labels[v] || v); o.value=v; input.append(o); }); }
@@ -179,14 +174,7 @@
     state.editing=record;state.dirty=false;const form=$('#case-form');form.reset();fieldNames.forEach(k=>{form.elements[k].value=record?.[k]??(k==='surgery_date'?today():'');});
     $('#case-fields').disabled=!canWrite()||Boolean(record?.archived);$('#save-case').hidden=!canWrite()||Boolean(record?.archived);$('#case-title').textContent=record?'รายละเอียด / แก้ไขผู้ป่วย':'เพิ่มผู้ป่วยใหม่';$('#save-case').textContent=record?'บันทึกการแก้ไข':'บันทึกผู้ป่วย';$('#case-error').textContent='';$('#save-state').textContent=record?`บันทึกล่าสุด ${record.updated} · ฉบับที่ ${record.revision}`:'ยังไม่ได้บันทึก';
     $('#case-audit').replaceChildren();if(record){$('#case-audit').append(el('p','',`สร้าง ${record.created} โดย ${record.created_by} · แก้ไขโดย ${record.updated_by}`));if(API.user.role==='admin')$('#case-audit').append(button('ดูประวัติการแก้ไข',async()=>{try{const data=await API.request(`${path('audit_logs')}?perPage=100&sort=-created&filter=${encodeURIComponent(`entity = "cases" && record_id = "${record.id}"`)}`);if(state.editing?.id!==record.id)return;$('#case-audit').replaceChildren(...data.items.map(a=>el('p','',`${a.created} · ${a.actor} · ${a.operation} · ${Object.keys(a.changes||{}).join(', ')}`)));}catch(e){$('#case-error').textContent=e.message;}}));}
-    const [hour='',minute='']=(record?.surgery_time||'').split(':');form.elements.surgery_hour.value=hour;form.elements.surgery_minute.value=minute;
     $('#case-dialog').showModal();
-  }
-  function readSurgeryTime(form){
-    const hour=form.elements.surgery_hour.value,minute=form.elements.surgery_minute.value;
-    if(hour===''&&minute==='')return '';
-    if(hour===''||minute===''||!Number.isInteger(Number(hour))||!Number.isInteger(Number(minute))||Number(hour)<0||Number(hour)>23||Number(minute)<0||Number(minute)>59)throw new Error('กรอกชั่วโมง 0–23 และนาที 0–59 ให้ครบทั้งสองช่อง');
-    return `${String(Number(hour)).padStart(2,'0')}:${String(Number(minute)).padStart(2,'0')}`;
   }
   function renderUsers(root){const p=panel('สมาชิกทีม');state.users.forEach(u=>{const r=el('article','record');r.append(el('strong','',u.name),el('span','badge',`${roles[u.role]} · ${u.active?'เปิด':'ปิด'}ใช้งาน`));if(u.id!==API.user.id)r.append(button('แก้ไขสมาชิก',()=>{state.user=u;const f=$('#user-form');f.elements.name.value=u.name;f.elements.role.value=u.role;f.elements.active.checked=u.active;$('#user-error').textContent='';$('#user-dialog').showModal();}));else r.append(el('span','muted','บัญชีของคุณ'));p.append(r);});root.append(p);}
   function renderTargets(root) {
@@ -288,7 +276,7 @@
   async function submit(event,errorSelector,task){event.preventDefault();const b=event.currentTarget.querySelector('button[type=submit]');if(b.disabled)return;b.disabled=true;$(errorSelector).textContent='';try{await task();}catch(e){$(errorSelector).textContent=e.message;}finally{b.disabled=false;}}
   $('#login-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#login-error',async()=>{await API.login(f.elements.identity.value.trim(),f.elements.password.value);f.reset();state.view='dashboard';await load();});};
   $('#case-form').oninput=()=>{state.dirty=true;$('#save-state').textContent='มีการแก้ไขที่ยังไม่ได้บันทึก (Unsaved changes)';};
-  $('#case-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#case-error',async()=>{state.saving=true;$('#save-state').textContent='กำลังบันทึก…';try{const body={};fieldNames.forEach(k=>{body[k]=f.elements[k].value.trim();});body.surgery_time=readSurgeryTime(f);if(state.editing)body.revision=state.editing.revision;await API.request(path('cases')+(state.editing?'/'+state.editing.id:''),{method:state.editing?'PATCH':'POST',body});state.dirty=false;$('#case-dialog').close();await load();notice('บันทึกสำเร็จ • Dashboard และ KPI อัปเดตแล้ว');}catch(err){$('#save-state').textContent='ยังไม่บันทึก — ตรวจข้อผิดพลาดและลองใหม่';throw err;}finally{state.saving=false;}});};
+  $('#case-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#case-error',async()=>{state.saving=true;$('#save-state').textContent='กำลังบันทึก…';try{const body={};fieldNames.forEach(k=>{body[k]=f.elements[k].value.trim();});if(state.editing)body.revision=state.editing.revision;await API.request(path('cases')+(state.editing?'/'+state.editing.id:''),{method:state.editing?'PATCH':'POST',body});state.dirty=false;$('#case-dialog').close();await load();notice('บันทึกสำเร็จ • Dashboard และ KPI อัปเดตแล้ว');}catch(err){$('#save-state').textContent='ยังไม่บันทึก — ตรวจข้อผิดพลาดและลองใหม่';throw err;}finally{state.saving=false;}});};
   $('#user-form').onsubmit=e=>{const f=e.currentTarget;submit(e,'#user-error',async()=>{await API.request(path('users')+'/'+state.user.id,{method:'PATCH',body:{name:f.elements.name.value.trim(),role:f.elements.role.value,active:f.elements.active.checked}});$('#user-dialog').close();await load();notice('บันทึกสมาชิกแล้ว');});};
   $('#target-form').oninput=()=>{targetState.dirty=true;$('#target-save-state').textContent='มีการแก้ไขที่ยังไม่ได้บันทึก';};
   $('#target-form').elements.formula_mode.onchange=()=>{formulaDraft.mode=$('#target-form').elements.formula_mode.value;if(formulaDraft.mode==='ratio'&&!formulaDraft.numerator)formulaDraft.numerator={match:'all',conditions:[]};renderFormulaBuilder();formulaChanged();};
