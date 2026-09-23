@@ -2,6 +2,11 @@
 
 Updated: 2026-09-23 (Asia/Bangkok)
 
+## KPI exclusion wording — 2026-09-23
+
+- Replaced the ambiguous exclusion label with `ไม่นำมาคำนวณ … ราย` on KPI cards and formula previews, and `ไม่นำมาคำนวณ (ราย)` in statistics/report tables. Calculation rules are unchanged.
+- Verified Dashboard wording at desktop and 390px mobile, plus the report table header. Temporary-database integration suite: **213 assertions PASS**. JS syntax, PowerShell parsing, Bash syntax and git diff --check passed.
+
 ## Remove surgery time — 2026-09-23
 
 - Removed hour/minute inputs, hidden time field, serialization and unused styles from create/edit forms.
