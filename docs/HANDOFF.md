@@ -1,6 +1,13 @@
 # Handoff
 
-Updated: 2026-09-23 (Asia/Bangkok)
+Updated: 2026-09-26 (Asia/Bangkok)
+
+## Illustrated Thai user guide — 2026-09-26
+
+- Added `docs/USER_GUIDE.md` for viewer/editor/admin workflows: access, periods, cases, follow-ups, KPI interpretation, statistics, alerts/CQI, reports, target formulas, membership, archive/restore and troubleshooting. Linked from README and the documentation index.
+- Six screenshots in `docs/images/user-guide-*.png` show the actual application using only disposable synthetic test data. Captions distinguish test values/targets from approved clinical criteria. Desktop views and the 390px mobile menu were visually inspected.
+- Documentation only; frontend assets, authorization, clinical calculations and schema are unchanged. No real `pb_data` was accessed. Temporary preview integration suite: **213 assertions PASS**.
+- Verified 31 local documentation links/image references/anchors, JavaScript syntax, PowerShell parsing, Bash syntax/LF and `git diff --check`. Browser warning/error logs were empty; temporary tab closed, viewport reset and preview port confirmed stopped.
 
 ## KPI exclusion wording — 2026-09-23
 
